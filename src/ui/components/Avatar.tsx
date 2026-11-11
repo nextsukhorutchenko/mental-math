@@ -1,5 +1,5 @@
 import { useContext, useEffect, useRef, useState } from "react";
-import type { CompanionEvent } from "../../game/companion/phrases";
+import type { CompanionEvent, PlaceKind } from "../../game/companion/phrases";
 import { SKINS, skinById } from "../../game/skins/skins";
 import { PlayerContext } from "../player";
 import { Companion } from "./Companion";
@@ -124,7 +124,8 @@ export function SkinPicker({ onPick, onClose }: { onPick: (skin: string) => void
  * Використовується в ключових моментах (привітання, острів, підсумок), а не під час рахунку,
  * щоб не відволікати від прикладу. Дотик до аватара відкриває вибір скіна.
  */
-export function Hero({ event, variant = 0, cheer = false }: { event: CompanionEvent; variant?: number; cheer?: boolean }) {
+export function Hero(props: { event: CompanionEvent; variant?: number; cheer?: boolean; place?: PlaceKind }) {
+  const { event, variant = 0, cheer = false, place } = props;
   const { onPickSkin } = useContext(PlayerContext);
   return (
     <div className="hero">
@@ -135,7 +136,7 @@ export function Hero({ event, variant = 0, cheer = false }: { event: CompanionEv
       ) : (
         <Avatar cheer={cheer} />
       )}
-      <Companion event={event} variant={variant} />
+      <Companion event={event} variant={variant} place={place} />
     </div>
   );
 }

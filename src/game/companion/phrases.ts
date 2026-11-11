@@ -4,6 +4,14 @@ export type Mood = "calm" | "happy" | "cheer" | "think";
 
 export const COMPANION_NAME = "Рудик";
 
+/** Ділянка, про яку говорить супутник на острові: назва й узгоджене з нею «гарний/гарна». */
+export type PlaceKind = "island" | "house" | "detail";
+const PLACES: Record<PlaceKind, { name: string; nice: string }> = {
+  island: { name: "острів", nice: "Гарний" },
+  house: { name: "будова", nice: "Гарна" },
+  detail: { name: "детальна будова", nice: "Гарна" },
+};
+
 const PHRASES: Record<CompanionEvent, string[]> = {
   greet: [
     "Привіт! Я {name}. Ходімо добувати блоки?",
@@ -17,7 +25,7 @@ const PHRASES: Record<CompanionEvent, string[]> = {
   retry: ["Майже! Спробуй ще раз, не поспішай.", "Перевір кожен рух — я вірю в тебе.", "Буває. Порахуймо ще раз спокійно."],
   review: ["Нічого страшного. Подивімося рухи разом.", "Помилки допомагають вчитися. Розберімо!", "Цей приклад хитрий. Зараз розберемося."],
   finish: ["Заняття завершено! Блоки вже в запасі.", "Ти сьогодні добре попрацювала!", "Ура! Ходімо будувати?"],
-  island: ["Що збудуємо сьогодні?", "Гарний острів росте!", "Може, збудуємо мені хатинку?"],
+  island: ["Що збудуємо сьогодні?", "{Гарний} {place} росте!", "Може, збудуємо мені хатинку?"],
 };
 
 const MOODS: Record<CompanionEvent, Mood> = {
@@ -41,11 +49,14 @@ export function phrase(
   variant: number,
   name = COMPANION_NAME,
   female = false,
+  place: PlaceKind = "island",
 ): { text: string; mood: Mood } {
   const list = PHRASES[event];
   const index = ((Math.trunc(variant) % list.length) + list.length) % list.length;
   const text = list[index]!
     .replace("{name}", name)
+    .replace("{place}", PLACES[place].name)
+    .replace("{Гарний}", PLACES[place].nice)
     .replace(/\{([^|}]+)\|([^}]+)\}/g, (_, male: string, fem: string) => (female ? fem : male));
   return { text, mood: MOODS[event] };
 }

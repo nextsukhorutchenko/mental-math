@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { PETS, petById } from "../../game/companion/pets";
-import { type CompanionEvent, type Mood, phrase } from "../../game/companion/phrases";
+import { type CompanionEvent, type Mood, type PlaceKind, phrase } from "../../game/companion/phrases";
 import { PlayerContext } from "../player";
 import { Modal } from "./Modal";
 
@@ -28,10 +28,10 @@ export function PetSprite({ id, mood = "calm", className = "" }: { id: string; m
 }
 
 /** Супутник із реплікою. variant обирає фразу зі списку для події; дотик до тварини відкриває вибір. */
-export function Companion({ event, variant = 0 }: { event: CompanionEvent; variant?: number }) {
+export function Companion({ event, variant = 0, place }: { event: CompanionEvent; variant?: number; place?: PlaceKind }) {
   const { pet, onPickPet } = useContext(PlayerContext);
   const companion = petById(pet);
-  const { text, mood } = phrase(event, variant, companion.name, companion.female);
+  const { text, mood } = phrase(event, variant, companion.name, companion.female, place);
   return (
     <div className="companion">
       {onPickPet ? (

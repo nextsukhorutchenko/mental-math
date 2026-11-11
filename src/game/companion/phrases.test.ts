@@ -40,6 +40,12 @@ describe("репліки супутника", () => {
     expect(parseSave({ ...emptySave(), pet: "unicorn" })!.pet).toBe(DEFAULT_PET);
   });
 
+  it("на острові говорить про вибрану ділянку", () => {
+    expect(phrase("island", 1).text).toBe("Гарний острів росте!");
+    expect(phrase("island", 1, "Яра", true, "house").text).toBe("Гарна будова росте!");
+    expect(phrase("island", 1, "Яра", true, "detail").text).toBe("Гарна детальна будова росте!");
+  });
+
   it("за помилку не сварить і не квапить", () => {
     for (const event of ["retry", "review"] as const) {
       for (let variant = 0; variant < 5; variant++) {

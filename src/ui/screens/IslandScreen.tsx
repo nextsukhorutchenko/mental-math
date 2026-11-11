@@ -176,7 +176,7 @@ export function IslandScreen({ world, questsDone, onChange }: Props) {
   return (
     <section className="panel">
       <h2>Мій острів</h2>
-      <Hero event="island" variant={Math.floor(placed / 12)} />
+      <Hero event="island" variant={Math.floor(placed / 12)} place={plot.kind} />
       <p className="note">
         Вибери блок і форму, а тоді торкнися клітинки або веди пальцем. Будь-яка форма коштує один блок; змінити
         форму вже поставленої деталі можна безкоштовно. Кирка забирає деталь назад у запас.

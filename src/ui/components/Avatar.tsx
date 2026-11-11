@@ -1,17 +1,11 @@
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import type { CompanionEvent } from "../../game/companion/phrases";
-import { DEFAULT_SKIN, SKINS, skinById } from "../../game/skins/skins";
+import { SKINS, skinById } from "../../game/skins/skins";
+import { PlayerContext } from "../player";
 import { Companion } from "./Companion";
+import { Modal } from "./Modal";
 
-/** Гравець: ім'я, вибраний скін і дії, щоб їх змінити (задаються в App). */
-export interface Player {
-  name: string;
-  skin: string;
-  onPickSkin?: () => void;
-  onRename?: (name: string) => void;
-}
-
-export const PlayerContext = createContext<Player>({ name: "Поля", skin: DEFAULT_SKIN });
+export { type Player, PlayerContext } from "../player";
 
 interface Props {
   /** full — увесь персонаж; head — лише голова з вушками (для значків). */
@@ -106,20 +100,8 @@ export function PlayerBadge() {
 /** Вибір скіна: сітка фігурок, вибраний підсвічено. */
 export function SkinPicker({ onPick, onClose }: { onPick: (skin: string) => void; onClose: () => void }) {
   const { skin: current } = useContext(PlayerContext);
-  useEffect(() => {
-    const close = (event: KeyboardEvent) => event.key === "Escape" && onClose();
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [onClose]);
   return (
-    <div className="modal" role="dialog" aria-modal="true" aria-label="Вибір скіна" onClick={onClose}>
-      <section className="panel skin-picker" onClick={(event) => event.stopPropagation()}>
-        <div className="skin-picker-head">
-          <h2>Вибери скін</h2>
-          <button className="btn btn-quiet" onClick={onClose} aria-label="Закрити">
-            ✕
-          </button>
-        </div>
+    <Modal title="Вибери скін" onClose={onClose}>
         <div className="skin-grid">
           {SKINS.map((skin) => (
             <button
@@ -133,8 +115,7 @@ export function SkinPicker({ onPick, onClose }: { onPick: (skin: string) => void
             </button>
           ))}
         </div>
-      </section>
-    </div>
+    </Modal>
   );
 }
 

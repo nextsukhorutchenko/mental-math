@@ -1,44 +1,71 @@
-import { COMPANION_NAME, type CompanionEvent, type Mood, phrase } from "../../game/companion/phrases";
+import { useContext } from "react";
+import { PETS, petById } from "../../game/companion/pets";
+import { type CompanionEvent, type Mood, phrase } from "../../game/companion/phrases";
+import { PlayerContext } from "../player";
+import { Modal } from "./Modal";
 
-// Власний персонаж застосунку — блокове лисеня. O руде, W біле, K темне, E око.
-const SPRITE = [
-  "..OO........OO..",
-  "..OKO......OKO..",
-  "..OOOOOOOOOOOO..",
-  "..OOOOOOOOOOOO..",
-  "..OOEOOOOOOEOO..",
-  "..OOEOOOOOOEOO..",
-  "..OWWOOOOOOWWO..",
-  "..WWWWWKKWWWWW..",
-  "...WWWWWWWWWW...",
-  "....WWWWWWWW....",
-];
-
-const COLORS: Record<string, string> = { O: "#e8792b", W: "#fff6e8", K: "#2b2118", E: "#2b2118" };
-
-function Sprite({ mood }: { mood: Mood }) {
-  const joyful = mood === "happy" || mood === "cheer";
+/** Піксельна тварина на повний зріст. */
+export function PetSprite({ id, mood = "calm", className = "" }: { id: string; mood?: Mood; className?: string }) {
+  const pet = petById(id);
+  const width = Math.max(...pet.rows.map((row) => row.length));
   return (
-    <svg className={`fox fox-${mood}`} viewBox="0 0 16 10" role="img" aria-label={COMPANION_NAME} shapeRendering="crispEdges">
-      {SPRITE.flatMap((row, y) =>
-        [...row].map((cell, x) => {
-          if (cell === ".") return null;
-          // Радісні очі — примружені: лишаємо тільки верхній піксель.
-          const squint = cell === "E" && joyful && y === 5;
-          return <rect key={`${x}-${y}`} x={x} y={y} width={1} height={1} fill={squint ? COLORS.O : COLORS[cell]} />;
-        }),
+    <svg
+      className={`fox fox-${mood} ${className}`}
+      viewBox={`0 0 ${width} ${pet.rows.length}`}
+      role="img"
+      aria-label={`${pet.species} ${pet.name}`}
+      shapeRendering="crispEdges"
+    >
+      {pet.rows.flatMap((row, y) =>
+        [...row].map((cell, x) =>
+          cell === "." || !pet.colors[cell] ? null : (
+            <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={pet.colors[cell]} />
+          ),
+        ),
       )}
     </svg>
   );
 }
 
-/** Супутник із реплікою. variant обирає фразу зі списку для події. */
+/** Супутник із реплікою. variant обирає фразу зі списку для події; дотик до тварини відкриває вибір. */
 export function Companion({ event, variant = 0 }: { event: CompanionEvent; variant?: number }) {
-  const { text, mood } = phrase(event, variant);
+  const { pet, onPickPet } = useContext(PlayerContext);
+  const { text, mood } = phrase(event, variant, petById(pet).name);
   return (
     <div className="companion">
-      <Sprite mood={mood} />
+      {onPickPet ? (
+        <button className="pet-button" onClick={onPickPet} aria-label="Вибрати супутника" title="Вибрати супутника">
+          <PetSprite id={pet} mood={mood} />
+        </button>
+      ) : (
+        <PetSprite id={pet} mood={mood} />
+      )}
       <p className="bubble">{text}</p>
     </div>
+  );
+}
+
+/** Вибір супутника: усі тварини з іменами, вибрана підсвічена. */
+export function PetPicker({ onPick, onClose }: { onPick: (pet: string) => void; onClose: () => void }) {
+  const { pet: current } = useContext(PlayerContext);
+  return (
+    <Modal title="Вибери супутника" onClose={onClose}>
+      <div className="skin-grid pet-grid">
+        {PETS.map((pet) => (
+          <button
+            key={pet.id}
+            className={`skin-card pet-card${pet.id === current ? " skin-card-active" : ""}`}
+            aria-pressed={pet.id === current}
+            onClick={() => onPick(pet.id)}
+          >
+            <PetSprite id={pet.id} />
+            <span>
+              {pet.name}
+              <small>{pet.species}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </Modal>
   );
 }

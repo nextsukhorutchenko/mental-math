@@ -24,6 +24,7 @@ import {
 } from "../game/seasons/seasons";
 import { type Player, PlayerBadge, PlayerContext, SkinPicker } from "./components/Avatar";
 import { Backdrop } from "./components/Backdrop";
+import { PetPicker } from "./components/Companion";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
 import { FlashScreen } from "./screens/FlashScreen";
@@ -70,6 +71,7 @@ export function App() {
   const [certWorld, setCertWorld] = useState<string | null>(null);
   const [cardsRun, setCardsRun] = useState<{ setup: CardSetup; key: number } | null>(null);
   const [pickingSkin, setPickingSkin] = useState(false);
+  const [pickingPet, setPickingPet] = useState(false);
 
   // Кожна зміна прогресу одразу пишеться в сховище; невдачу показуємо батькам.
   useEffect(() => {
@@ -239,7 +241,9 @@ export function App() {
   const player: Player = {
     name: save.childName.trim() || DEFAULT_CHILD_NAME,
     skin: save.skin,
+    pet: save.pet,
     onPickSkin: () => setPickingSkin(true),
+    onPickPet: () => setPickingPet(true),
     onRename: (childName) => setSave((current) => ({ ...current, childName })),
   };
 
@@ -253,6 +257,15 @@ export function App() {
           setPickingSkin(false);
         }}
         onClose={() => setPickingSkin(false)}
+      />
+    )}
+    {pickingPet && (
+      <PetPicker
+        onPick={(pet) => {
+          setSave((current) => ({ ...current, pet }));
+          setPickingPet(false);
+        }}
+        onClose={() => setPickingPet(false)}
       />
     )}
     <div className="app">

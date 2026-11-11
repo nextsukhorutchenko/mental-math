@@ -6,7 +6,7 @@ export const COMPANION_NAME = "Рудик";
 
 const PHRASES: Record<CompanionEvent, string[]> = {
   greet: [
-    "Привіт! Я Рудик. Ходімо добувати блоки?",
+    "Привіт! Я {name}. Ходімо добувати блоки?",
     "З поверненням! Який рівень сьогодні?",
     "Я вже наточив кирку. Почнімо?",
     "Радий тебе бачити! Острів чекає на нові блоки.",
@@ -31,9 +31,12 @@ const MOODS: Record<CompanionEvent, Mood> = {
   island: "happy",
 };
 
-/** Репліка для події. variant — будь-яке число (номер прикладу, день), щоб фрази чергувалися, але не блимали. */
-export function phrase(event: CompanionEvent, variant: number): { text: string; mood: Mood } {
+/**
+ * Репліка для події. variant — будь-яке число (номер прикладу, день), щоб фрази чергувалися, але не блимали.
+ * name — ім'я вибраного супутника.
+ */
+export function phrase(event: CompanionEvent, variant: number, name = COMPANION_NAME): { text: string; mood: Mood } {
   const list = PHRASES[event];
   const index = ((Math.trunc(variant) % list.length) + list.length) % list.length;
-  return { text: list[index]!, mood: MOODS[event] };
+  return { text: list[index]!.replace("{name}", name), mood: MOODS[event] };
 }

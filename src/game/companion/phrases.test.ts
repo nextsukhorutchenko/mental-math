@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { emptySave, parseSave } from "../../storage/save";
+import { DEFAULT_PET, PETS, petById } from "./pets";
 import { type CompanionEvent, phrase } from "./phrases";
 
 const EVENTS: CompanionEvent[] = ["greet", "ask", "correct", "corrected", "retry", "review", "finish", "island"];
@@ -15,6 +17,23 @@ describe("репліки супутника", () => {
   it("репліки чергуються, але для того самого номера не змінюються", () => {
     expect(phrase("correct", 0).text).not.toBe(phrase("correct", 1).text);
     expect(phrase("correct", 2)).toEqual(phrase("correct", 2));
+  });
+
+  it("представляється іменем вибраного супутника", () => {
+    expect(phrase("greet", 0).text).toBe("Привіт! Я Рудик. Ходімо добувати блоки?");
+    expect(phrase("greet", 0, "Рекс").text).toContain("Я Рекс.");
+  });
+
+  it("кожен супутник — тварина з ім'ям, де кожна клітинка має колір", () => {
+    expect(PETS.map((pet) => pet.id)).toEqual(
+      expect.arrayContaining(["fox", "cat", "dog", "wolf", "bear", "boar", "tiger", "lion", "bison", "trex"]),
+    );
+    expect(new Set(PETS.map((pet) => pet.name)).size).toBe(PETS.length);
+    for (const pet of PETS)
+      for (const row of pet.rows) for (const cell of row) if (cell !== ".") expect(pet.colors[cell], `${pet.id} ${cell}`).toBeTruthy();
+    expect(petById("unicorn").id).toBe(DEFAULT_PET);
+    expect(parseSave({ ...emptySave(), pet: "trex" })!.pet).toBe("trex");
+    expect(parseSave({ ...emptySave(), pet: "unicorn" })!.pet).toBe(DEFAULT_PET);
   });
 
   it("за помилку не сварить і не квапить", () => {

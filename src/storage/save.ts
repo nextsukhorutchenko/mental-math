@@ -20,6 +20,7 @@ import {
 import type { CardRecord } from "../game/cards/types";
 import { type BackdropChoice, HOLIDAY_IDS, type HolidayId, isBirthday } from "../game/seasons/seasons";
 import { DEFAULT_SKIN, isSkinId } from "../game/skins/skins";
+import { DEFAULT_PET, isPetId } from "../game/companion/pets";
 import { LEVEL_IDS, TRACK_IDS } from "../game/curriculum/levels";
 import {
   DEFAULT_SETUP,
@@ -118,6 +119,8 @@ export interface SaveData {
   birthday: string | null;
   /** Вибраний скін гравця. */
   skin: string;
+  /** Вибраний супутник. */
+  pet: string;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -153,6 +156,7 @@ export function emptySave(): SaveData {
     backdrop: null,
     birthday: null,
     skin: DEFAULT_SKIN,
+    pet: DEFAULT_PET,
   };
 }
 
@@ -368,6 +372,7 @@ export function parseSave(value: unknown): SaveData | null {
         : null,
     birthday: isBirthday(value.birthday) ? value.birthday : null,
     skin: isSkinId(value.skin) ? value.skin : DEFAULT_SKIN,
+    pet: isPetId(value.pet) ? value.pet : DEFAULT_PET,
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

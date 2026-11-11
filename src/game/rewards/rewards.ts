@@ -120,7 +120,7 @@ export const TASK_REWARDS: { id: string; title: string; loot: Loot; applies: (in
   {
     id: "long",
     title: "Довгі ланцюжки: 5+ чисел у прикладі",
-    loot: { solar: 1 },
+    loot: { truck: 1 },
     applies: (i) => i.actions >= 5 && i.levelKind !== "multiply" && i.levelKind !== "divide",
   },
   { id: "accurate", title: "Уважне заняття: 80% самостійно", loot: { flower: 2 }, applies: (i) => i.accurate },

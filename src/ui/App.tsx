@@ -24,6 +24,7 @@ import {
 import { type Player, PlayerBadge, PlayerContext, SkinPicker } from "./components/Avatar";
 import { Backdrop } from "./components/Backdrop";
 import { PetPicker } from "./components/Companion";
+import { AbacusToggle } from "./components/AbacusChoice";
 import { claimQuests } from "../game/island/quests";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
@@ -244,6 +245,8 @@ export function App() {
     name: save.childName.trim() || DEFAULT_CHILD_NAME,
     skin: save.skin,
     pet: save.pet,
+    screenAbacus: save.screenAbacus,
+    onScreenAbacus: (screenAbacus) => setSave((current) => ({ ...current, screenAbacus })),
     onPickSkin: () => setPickingSkin(true),
     onPickPet: () => setPickingPet(true),
     onRename: (childName) => setSave((current) => ({ ...current, childName })),
@@ -287,6 +290,7 @@ export function App() {
         <h1>Ментальна математика</h1>
         <div className="topbar-actions">
           <PlayerBadge />
+          <AbacusToggle />
           <button
             className="btn btn-quiet"
             aria-pressed={save.sound}

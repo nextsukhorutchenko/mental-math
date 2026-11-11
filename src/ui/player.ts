@@ -7,9 +7,17 @@ export interface Player {
   name: string;
   skin: string;
   pet: string;
+  /** Справжнього абакуса немає: у заняттях на абакусі кісточки рухають на екрані. */
+  screenAbacus: boolean;
+  onScreenAbacus?: (value: boolean) => void;
   onPickSkin?: () => void;
   onPickPet?: () => void;
   onRename?: (name: string) => void;
 }
 
-export const PlayerContext = createContext<Player>({ name: "Поля", skin: DEFAULT_SKIN, pet: DEFAULT_PET });
+export const PlayerContext = createContext<Player>({
+  name: "Поля",
+  skin: DEFAULT_SKIN,
+  pet: DEFAULT_PET,
+  screenAbacus: false,
+});

@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
+import type { Abacus } from "../../core/soroban/abacus";
+import { PlayerContext } from "../player";
+import { ScreenAbacus, rodsFor } from "../components/ScreenAbacus";
+import { AbacusChoice } from "../components/AbacusChoice";
 import { type Example, formatExample, generateDrill } from "../../core/generator/generator";
 import { introSteps } from "../../core/rules/demo";
 import { diagnose } from "../../core/rules/diagnose";
@@ -59,6 +63,7 @@ interface IntroProps {
 
 function Intro({ setup, seed, onStart }: IntroProps) {
   const { topic, mode } = setup;
+  const onScreen = useContext(PlayerContext).screenAbacus;
   const level = levelById(setup.level);
   // Для формул показуємо найкоротший зразок прийому, для решти рівнів — окремий приклад того самого виду.
   const demo: Pick<Example, "steps" | "labels" | "prompt"> = useMemo(() => {
@@ -76,8 +81,11 @@ function Intro({ setup, seed, onStart }: IntroProps) {
       <p className="note">
         {mode === "mental"
           ? "Цього разу абакус відклади. Уявляй його перед собою і пересувай кісточки подумки."
-          : "Постав свій абакус перед собою і повтори ці рухи руками."}
+          : onScreen
+            ? "У вправах абакус буде на екрані: торкайся кісточок так само, як рухала б їх пальцями."
+            : "Постав свій абакус перед собою і повтори ці рухи руками."}
       </p>
+      {mode === "physical" && <AbacusChoice />}
       <button className="btn btn-big" onClick={onStart}>
         До вправ ▶
       </button>
@@ -95,6 +103,10 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   // Множення й ділення завжди показуються цілим записом: подавати їх по одному числу немає сенсу.
   const sequential = setup.pacing !== "all" && !currentExample(session)?.prompt;
   const mental = setup.mode === "mental";
+  // Без справжнього абакуса заняття «на абакусі» йде на екранному: відповідь зчитується з кісточок.
+  const { screenAbacus } = useContext(PlayerContext);
+  const onScreen = !mental && screenAbacus;
+  const [beads, setBeads] = useState<Abacus | undefined>(undefined);
   const [input, setInput] = useState("");
   const [showDemo, setShowDemo] = useState(false);
   // Чи числа вже показано по одному (для показу всього прикладу — одразу так).
@@ -111,8 +123,8 @@ function Practice({ session, setup, onChange }: PracticeProps) {
     lastAnswer === undefined || session.status === "solved" || example.prompt ? [] : diagnose(example.steps, lastAnswer);
   const clue = clues[0];
 
-  const submit = () => {
-    const answered = submitAnswer(session, Number(input));
+  const submit = (value = Number(input)) => {
+    const answered = submitAnswer(session, value);
     playSound(answered.status === "solved" ? "correct" : answered.status === "failed" ? "review" : "retry");
     onChange(answered);
     setInput("");
@@ -121,8 +133,11 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   const next = () => {
     onChange(nextExample(session));
     setInput("");
+    setBeads(undefined);
     setShowDemo(false);
   };
+  // Спиць вистачає на найбільше число прикладу.
+  const rods = rodsFor(Math.max(example.answer, ...example.steps.flatMap((step) => [step.before, step.after, step.operand])));
   const openDemo = () => {
     onChange(markHint(session));
     setShowDemo(true);
@@ -131,10 +146,14 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   const prompt = retry
     ? mental
       ? "Не зовсім. Уяви абакус і порахуй ще раз."
-      : "Не зовсім. Порахуй на абакусі ще раз."
+      : onScreen
+        ? "Не зовсім. Перевір кісточки й виправ."
+        : "Не зовсім. Порахуй на абакусі ще раз."
     : mental
       ? "Уяви абакус, порахуй подумки та введи відповідь."
-      : "Порахуй на своєму абакусі та введи відповідь.";
+      : onScreen
+        ? "Рахуй на абакусі: торкайся кісточок. Коли на ньому буде відповідь — натисни «Готово»."
+        : "Порахуй на своєму абакусі та введи відповідь.";
 
   return (
     <section className="panel">
@@ -188,10 +207,22 @@ function Practice({ session, setup, onChange }: PracticeProps) {
                   </p>
                 )}
                 <Companion event={retry ? "retry" : "ask"} variant={session.index} />
-                <div className="answer" aria-live="polite">
-                  {input || "?"}
-                </div>
-                <Keypad value={input} onChange={setInput} onSubmit={submit} />
+                {onScreen ? (
+                  <ScreenAbacus
+                    key={session.index}
+                    rods={rods}
+                    initial={beads}
+                    onChange={setBeads}
+                    onSubmit={(value) => submit(value)}
+                  />
+                ) : (
+                  <>
+                    <div className="answer" aria-live="polite">
+                      {input || "?"}
+                    </div>
+                    <Keypad value={input} onChange={setInput} onSubmit={() => submit()} />
+                  </>
+                )}
                 {sequential && (
                   <button className="btn btn-quiet" onClick={() => setShown(false)}>
                     🔁 Показати числа ще раз
@@ -204,7 +235,7 @@ function Practice({ session, setup, onChange }: PracticeProps) {
               <>
                 <StepDemo key={session.index} steps={example.steps} labels={example.labels} />
                 <button className="btn" onClick={() => setShowDemo(false)}>
-                  Зрозуміло, вводжу відповідь
+                  {onScreen ? "Зрозуміло, рахую на абакусі" : "Зрозуміло, вводжу відповідь"}
                 </button>
               </>
             )}
@@ -234,7 +265,11 @@ function Practice({ session, setup, onChange }: PracticeProps) {
                 ))}
                 <p>
                   Правильна відповідь: {example.answer}.{" "}
-                  {mental ? "Простеж за рухами й уяви їх." : "Повтори рухи на своєму абакусі."}
+                  {mental
+                    ? "Простеж за рухами й уяви їх."
+                    : onScreen
+                      ? "Простеж за рухами — наступного разу вийде."
+                      : "Повтори рухи на своєму абакусі."}
                 </p>
                 <StepDemo key={session.index} steps={example.steps} labels={example.labels} />
                 <button className="btn btn-big" onClick={next}>

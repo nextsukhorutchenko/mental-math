@@ -59,13 +59,25 @@ describe("форми деталей", () => {
   });
 });
 
+describe("машинка-монстр замість сонячної панелі", () => {
+  it("старі панелі в запасі й на острові стають машинками", () => {
+    const cells = emptyIsland();
+    cells[0] = "solar";
+    const old = { ...emptySave(), inventory: { ...starterInventory(), solar: 2, truck: 1 }, plots: [{ kind: "island", cells }] };
+    const parsed = parseSave(JSON.parse(JSON.stringify(old)))!;
+    expect(parsed.inventory.truck).toBe(3);
+    expect(parsed.plots[0]!.cells[0]).toBe("truck");
+    expect("solar" in parsed.inventory).toBe(false);
+  });
+});
+
 describe("предмети за тренування", () => {
   it("кожен вид тренування дає свій предмет", () => {
     expect(taskLoot({ ...info, mode: "mental" }, 10, false)).toEqual({ window: 1 });
     expect(taskLoot({ ...info, pacing: "voice" }, 10, false)).toEqual({ door: 1 });
     expect(taskLoot({ ...info, pacing: "auto" }, 10, false)).toEqual({ lamp: 1 });
     expect(taskLoot({ ...info, levelKind: "multiply", actions: 6 }, 10, false)).toEqual({ stairs: 2 });
-    expect(taskLoot({ ...info, actions: 5 }, 10, false)).toEqual({ solar: 1 });
+    expect(taskLoot({ ...info, actions: 5 }, 10, false)).toEqual({ truck: 1 });
     expect(taskLoot({ ...info, accurate: true }, 10, false)).toEqual({ flower: 2 });
   });
 

@@ -153,7 +153,7 @@ export function FlashScreen({ best, onResult, onExit }: Props) {
         <h2>{passed ? "Рівень пройдено! ⭐" : "Поки не вийшло"}</h2>
         <p className="lead">
           Правильних раундів: {correct} з {FLASH.rounds}.{" "}
-          {newRecord && "Це новий рекорд — тримай кристал і сонячну панель!"}
+          {newRecord && "Це новий рекорд — тримай кристал і машинку-монстра!"}
         </p>
         <div className="row">
           <button className="btn btn-big" onClick={() => setPhase("pick")}>

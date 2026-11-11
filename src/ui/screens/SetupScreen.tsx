@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AbacusChoice } from "../components/AbacusChoice";
 import { LEVELS, levelById } from "../../game/curriculum/levels";
 import { masteryOf } from "../../game/progress/progress";
 import { type LessonSetup, SETUP_LIMITS } from "../../game/session/setup";
@@ -190,6 +191,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           ]}
           onChange={(mode) => set({ mode })}
         />
+        {setup.mode === "physical" && <AbacusChoice />}
       </div>
 
       {!fact && (

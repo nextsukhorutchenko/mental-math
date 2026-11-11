@@ -12,6 +12,7 @@ import {
 } from "../../game/seasons/seasons";
 import type { SaveData } from "../../storage/save";
 import { BackupPanel } from "./BackupPanel";
+import { AbacusChoice } from "../components/AbacusChoice";
 
 const WEEKDAYS = ["нд", "пн", "вт", "ср", "чт", "пт", "сб"];
 const skillName = trackTitle;
@@ -281,6 +282,16 @@ export function ParentsScreen(props: Props) {
             </button>
           )}
         </div>
+      </section>
+
+      <section className="panel">
+        <h2>Абакус</h2>
+        <p className="note">
+          Якщо справжнього абакуса немає під рукою, заняття «на абакусі» йдуть на екранному: дитина торкається кісточок,
+          а відповідь застосунок зчитує сам. Справжній абакус усе ж кращий — руки запам'ятовують рухи, — тож
+          повертайтеся до нього, щойно він буде.
+        </p>
+        <AbacusChoice />
       </section>
 
       <BackdropPanel

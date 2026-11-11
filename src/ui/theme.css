@@ -1359,11 +1359,17 @@ main > .panel + .panel {
   border-color: transparent;
 }
 
-.block-solar {
+/* Машинка-монстр: червоний кузов із кабіною на величезних колесах. */
+.block-truck {
   background:
-    repeating-linear-gradient(90deg, transparent 0 30%, #9cc3e8 30% 34%),
-    repeating-linear-gradient(0deg, transparent 0 30%, #9cc3e8 30% 34%),
-    linear-gradient(135deg, #2f5aa8, #1e3a6e);
+    linear-gradient(#bfe6ff, #bfe6ff) 62% 24% / 16% 12% no-repeat,
+    linear-gradient(#e53935, #e53935) 58% 22% / 36% 20% no-repeat,
+    radial-gradient(circle closest-side, #ffe066 0 70%, transparent 75%) 96% 44% / 10% 10% no-repeat,
+    linear-gradient(#e53935, #b71c1c) 50% 46% / 94% 20% no-repeat,
+    linear-gradient(#3a3530, #3a3530) 50% 62% / 56% 6% no-repeat,
+    radial-gradient(circle closest-side, #c9c9c9 0 28%, #2b2b2b 32% 90%, transparent 94%) 4% 100% / 44% 44% no-repeat,
+    radial-gradient(circle closest-side, #c9c9c9 0 28%, #2b2b2b 32% 90%, transparent 94%) 96% 100% / 44% 44% no-repeat;
+  border-color: transparent;
 }
 
 /* Вибір форми. */
@@ -2417,6 +2423,92 @@ select {
   stroke: var(--gold-dark);
   stroke-width: 4;
   fill: var(--gold);
+}
+
+/* Перемикач «є абакус / нема» у верхній панелі. */
+.abacus-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.abacus-toggle-screen {
+  background: #e9f6ff;
+}
+
+/*
+ * Увага: блокова червона рамка, що пульсує кроками, як у піксельному світі.
+ * Зовнішня рамка зроблена тінню, щоб не зсувати сусідні кнопки.
+ */
+.attention {
+  animation: attention 1s steps(2, jump-none) infinite;
+}
+
+@keyframes attention {
+  from {
+    box-shadow:
+      0 5px 0 #cfc6b3,
+      0 5px 0 4px var(--stone-edge),
+      0 0 0 4px var(--stone-edge),
+      0 0 0 8px var(--red);
+  }
+  to {
+    box-shadow:
+      0 5px 0 #cfc6b3,
+      0 5px 0 4px var(--stone-edge),
+      0 0 0 4px var(--red),
+      0 0 0 8px #ff8a6a;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .attention {
+    animation: none;
+    box-shadow:
+      0 5px 0 #cfc6b3,
+      0 5px 0 4px var(--stone-edge),
+      0 0 0 4px var(--stone-edge),
+      0 0 0 8px var(--red);
+  }
+}
+
+@media (max-width: 560px) {
+  .abacus-toggle-text {
+    display: none;
+  }
+}
+
+/* Екранний абакус замість справжнього: більший, кісточки реагують на дотик. */
+.screen-abacus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.abacus-interactive {
+  max-width: 440px;
+  touch-action: manipulation;
+  user-select: none;
+}
+
+.abacus-interactive .bead {
+  cursor: pointer;
+  transition-duration: 140ms;
+}
+
+.abacus-interactive .bead:focus-visible {
+  outline: none;
+}
+
+.abacus-interactive .bead:focus-visible rect:first-child {
+  stroke: var(--gold-dark);
+  stroke-width: 5;
+}
+
+.bead-hit {
+  fill: transparent;
 }
 
 @media (prefers-reduced-motion: reduce) {

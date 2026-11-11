@@ -3,6 +3,7 @@ import { ALL_SKILLS, type SkillId } from "../core/rules/skills";
 import type { ExampleResult } from "../game/session/session";
 import {
   BLOCKS,
+  type BlockId,
   type Bonus,
   type Inventory,
   type Island,
@@ -123,6 +124,8 @@ export interface SaveData {
   pet: string;
   /** Виконані завдання будівельника (приз за кожне видається один раз). */
   questsDone: string[];
+  /** Справжнього абакуса немає: рахувати на екранному. */
+  screenAbacus: boolean;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -160,6 +163,7 @@ export function emptySave(): SaveData {
     skin: DEFAULT_SKIN,
     pet: DEFAULT_PET,
     questsDone: [],
+    screenAbacus: false,
   };
 }
 
@@ -239,6 +243,9 @@ function parseCardRecord(value: unknown): CardRecord | null {
   };
 }
 
+/** Предмети, які перейменували: старе збереження отримує нові замість них. */
+const RENAMED_BLOCKS: Record<string, string> = { solar: "truck" };
+
 function parseLoot(value: unknown): Loot {
   const loot: Loot = {};
   if (!isObj(value)) return loot;
@@ -246,7 +253,18 @@ function parseLoot(value: unknown): Loot {
     const count = value[block];
     if (isCount(count) && count > 0) loot[block] = count;
   }
+  for (const [old, block] of Object.entries(RENAMED_BLOCKS) as [string, BlockId][]) {
+    const count = value[old];
+    if (isCount(count) && count > 0) loot[block] = (loot[block] ?? 0) + count;
+  }
   return loot;
+}
+
+function renamedCell(cell: unknown): unknown {
+  if (typeof cell !== "string") return cell;
+  const [block, ...rest] = cell.split("/");
+  const renamed = RENAMED_BLOCKS[block!];
+  return renamed ? [renamed, ...rest].join("/") : cell;
 }
 
 /** Інвентар зі старого збереження без блоків отримує стартовий набір. */
@@ -258,7 +276,10 @@ function parseInventory(value: unknown): Inventory {
 function parseCells(value: unknown, kind: PlotKind): Island {
   const { cols, rows } = PLOT_SIZE[kind];
   if (!Array.isArray(value) || value.length !== cols * rows) return emptyPlot(kind).cells;
-  return value.map((cell) => (isCell(cell) ? cell : null));
+  return value.map((raw) => {
+    const cell = renamedCell(raw);
+    return isCell(cell) ? cell : null;
+  });
 }
 
 /** Ділянки; старе збереження з одним полем island стає першою ділянкою-островом. */
@@ -379,6 +400,7 @@ export function parseSave(value: unknown): SaveData | null {
     questsDone: Array.isArray(value.questsDone)
       ? [...new Set(value.questsDone.filter((id): id is string => typeof id === "string"))].slice(0, 100)
       : [],
+    screenAbacus: value.screenAbacus === true,
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

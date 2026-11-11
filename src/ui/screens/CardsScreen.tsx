@@ -1,4 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
+import { PlayerContext } from "../player";
+import { ScreenAbacus } from "../components/ScreenAbacus";
+import { AbacusChoice } from "../components/AbacusChoice";
 import { cardRods, generateCards } from "../../game/cards/cards";
 import { CARD_LIMITS, type CardSetup, DEFAULT_SPAN, MEMORY_SECONDS, cardSpan } from "../../game/cards/types";
 import type { Loot } from "../../game/rewards/blocks";
@@ -78,6 +81,7 @@ function Setup({ initial, onStart }: { initial: CardSetup; onStart: (setup: Card
           onChange={(digits) => set({ digits })}
         />
       </div>
+      {setup.kind === "set" && <AbacusChoice />}
       {setup.kind === "set" && setup.digits > 1 && (
         <div className="field">
           <span>Руки</span>
@@ -143,6 +147,8 @@ interface PlayProps {
 }
 
 function Play({ setup, cards, onDone }: PlayProps) {
+  // Без справжнього абакуса число набирають на екранному, і застосунок звіряє його сам.
+  const { screenAbacus } = useContext(PlayerContext);
   const [index, setIndex] = useState(0);
   const [results, setResults] = useState<boolean[]>([]);
   const [input, setInput] = useState("");
@@ -230,7 +236,28 @@ function Play({ setup, cards, onDone }: PlayProps) {
         <div className="work">
           <div className="example card-number">{card}</div>
           <div className="work-side">
-            {!revealed ? (
+            {screenAbacus && answered === null ? (
+              <>
+                <p className="prompt">Набери це число на абакусі: торкайся кісточок.</p>
+                <ScreenAbacus
+                  key={index}
+                  rods={cardRods(setup.digits)}
+                  submitLabel="Перевір ✓"
+                  onSubmit={(value) => {
+                    setInput(String(value));
+                    answer(value === card);
+                  }}
+                />
+              </>
+            ) : screenAbacus ? (
+              <div className={`feedback ${answered ? "feedback-good" : "feedback-review"}`}>
+                <p className="feedback-title">{answered ? "Чудово! ⭐" : `Ти набрала ${input}, а треба ${card}`}</p>
+                {!answered && <AbacusView abacus={abacus} />}
+                <button className="btn btn-big" autoFocus onClick={next}>
+                  Далі ▶
+                </button>
+              </div>
+            ) : !revealed ? (
               <>
                 <p className="prompt">
                   {setup.twoHands

@@ -67,8 +67,8 @@ export function flashNumbers(flash: FlashLevel, seed: number): number[] {
 
 export const flashPassed = (correctRounds: number) => correctRounds >= FLASH.pass;
 
-/** Новий рекорд дає кристал і сонячну панель; повторне проходження вже взятого рівня нічого не змінює. */
-export const FLASH_LOOT = { crystal: 1, solar: 1 } as const;
+/** Новий рекорд дає кристал і машинку-монстра; повторне проходження вже взятого рівня нічого не змінює. */
+export const FLASH_LOOT = { crystal: 1, truck: 1 } as const;
 export function creditFlash(save: SaveData, levelNumber: number, correctRounds: number): SaveData {
   if (!flashPassed(correctRounds) || levelNumber <= save.flashBest) return save;
   return { ...save, flashBest: levelNumber, inventory: withLoot(save.inventory, FLASH_LOOT) };

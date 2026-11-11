@@ -2,7 +2,7 @@
 /** Матеріали: з них можна робити будь-яку форму. */
 export const MATERIALS = ["grass", "wood", "stone", "sand", "ice", "brick", "gold", "glass", "crystal"] as const;
 /** Готові предмети: здобуваються за окремі завдання й тренування. */
-export const ITEMS = ["door", "window", "stairs", "lamp", "flower", "solar"] as const;
+export const ITEMS = ["door", "window", "stairs", "lamp", "flower", "truck"] as const;
 export const BLOCKS = [...MATERIALS, ...ITEMS] as const;
 export type BlockId = (typeof BLOCKS)[number];
 
@@ -21,7 +21,7 @@ export const BLOCK_NAMES: Record<BlockId, string> = {
   stairs: "сходи",
   lamp: "ліхтар",
   flower: "квіти",
-  solar: "сонячна панель",
+  truck: "машинка-монстр",
 };
 
 /**

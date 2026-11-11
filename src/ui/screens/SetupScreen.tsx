@@ -26,10 +26,14 @@ const isFactLevel = (id: string | undefined) => {
 
 /** Вид тренування — перший і найпомітніший вибір у тренажері. */
 type TrainerKind = "chain" | "multiply" | "divide";
-const KINDS: { value: TrainerKind; label: string }[] = [
-  { value: "chain", label: "➕➖ Додавання й віднімання" },
-  { value: "multiply", label: "✖ Множення" },
-  { value: "divide", label: "➗ Ділення" },
+/** «Дії» — перший вибір у тренажері: додавання й віднімання, множення або ділення. */
+type ActionChoice = LessonSetup["operations"] | "multiply" | "divide";
+const ACTIONS: { value: ActionChoice; label: string }[] = [
+  { value: "mixed", label: "+ і −" },
+  { value: "+", label: "лише +" },
+  { value: "-", label: "лише −" },
+  { value: "multiply", label: "× множення" },
+  { value: "divide", label: "÷ ділення" },
 ];
 const firstLevelOf = (kind: "multiply" | "divide") => LEVELS.find((level) => level.kind === kind)!.id;
 
@@ -115,6 +119,11 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
     if (next === "chain") set({ level: undefined });
     else set({ level: lastFact[next], pacing: "all" });
   };
+  const actionValue: ActionChoice = kind === "chain" ? setup.operations : kind;
+  const chooseAction = (next: ActionChoice) => {
+    if (next === "multiply" || next === "divide") chooseKind(next);
+    else set({ operations: next, level: undefined });
+  };
   /** Рівень зберігаємо лише для множення й ділення, щоб формули йшли звичним шляхом. */
   const start = () => {
     const { level, ...rest } = setup;
@@ -135,8 +144,8 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
       </p>
 
       <div className="field">
-        <span>Що тренуємо</span>
-        <Choice value={kind} options={KINDS} onChange={chooseKind} />
+        <span>Дії</span>
+        <Choice value={actionValue} options={ACTIONS} onChange={chooseAction} />
       </div>
 
       <label className="field">
@@ -272,19 +281,6 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
             { value: 3 as const, label: "трицифрові" },
           ]}
           onChange={(digits) => set({ digits })}
-        />
-      </div>
-
-      <div className="field">
-        <span>Дії</span>
-        <Choice
-          value={setup.operations}
-          options={[
-            { value: "mixed" as const, label: "+ і −" },
-            { value: "+" as const, label: "лише +" },
-            { value: "-" as const, label: "лише −" },
-          ]}
-          onChange={(operations) => set({ operations })}
         />
       </div>
       </>

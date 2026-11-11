@@ -171,7 +171,7 @@ function parseMode(value: unknown): ModeProgress {
 function parseCardRecord(value: unknown): CardRecord | null {
   if (!isObj(value) || typeof value.id !== "string" || !isDate(value.finishedAt)) return null;
   const { kind, digits, total, correct } = value;
-  if (kind !== "read" && kind !== "set") return null;
+  if (kind !== "read" && kind !== "set" && kind !== "memory") return null;
   if (!isCount(digits) || !isCount(total) || !isCount(correct) || correct > total) return null;
   return {
     id: value.id,

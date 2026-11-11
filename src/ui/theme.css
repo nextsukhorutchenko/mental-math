@@ -659,6 +659,43 @@ main > .panel + .panel {
   max-width: 200px;
 }
 
+.memory-picture {
+  width: min(240px, 100%);
+  animation: pop 180ms ease-out;
+}
+
+.memory-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+}
+
+.memory-item {
+  flex: 1 1 110px;
+  max-width: 170px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  background: #fff;
+  border: 3px solid var(--stone-edge);
+  font-weight: 700;
+  font-size: 15px;
+  text-align: center;
+}
+
+.memory-miss {
+  border-color: var(--red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-picture {
+    animation: none;
+  }
+}
+
 .card-number {
   text-align: center;
   font-size: clamp(48px, 12vw, 80px);

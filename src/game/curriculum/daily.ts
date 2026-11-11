@@ -53,12 +53,23 @@ export function dailyPlan(save: SaveData, now: Date): DailyPart[] {
   const reachedTens = ALL_SKILLS.some(
     (skill) => (skillFamily(skill) === "ten" || skillFamily(skill) === "mix") && (save.skills[skill]?.physical.total ?? 0) > 0,
   );
-  const kind = now.getDate() % 2 === 0 ? "read" : "set";
-  const cards: CardSetup = { ...DEFAULT_CARDS, kind, digits: reachedTens ? 2 : 1 };
+  // Три види розминки по колу: упізнати кісточки, запам'ятати кілька картинок, набрати число руками.
+  const kind = (["read", "memory", "set"] as const)[now.getDate() % 3]!;
+  const digits = reachedTens ? 2 : 1;
+  const cards: CardSetup =
+    kind === "memory"
+      ? { kind, digits: 1, count: 5, showSeconds: 2, span: reachedTens ? 3 : 2 }
+      : { ...DEFAULT_CARDS, kind, digits, ...(kind === "set" && digits > 1 ? { twoHands: true } : {}) };
+  const what =
+    kind === "read"
+      ? `${cards.count} карток — назви число за кісточками`
+      : kind === "set"
+        ? `${cards.count} карток — набери число на абакусі${cards.twoHands ? " двома руками" : ""}`
+        : `${cards.count} спроб — запам'ятай ${cards.span} картинки з абакусом`;
   parts.push({
     id: "cards",
     title: "Розминка: картки",
-    detail: `${cards.count} карток — ${kind === "read" ? "назви число за кісточками" : "набери число на абакусі"}`,
+    detail: what,
     done: save.cardLog.some(isToday),
     cards,
   });

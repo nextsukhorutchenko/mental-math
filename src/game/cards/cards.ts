@@ -5,7 +5,7 @@ import type { Loot } from "../rewards/blocks";
 import { REWARDS, addLoot, withLoot } from "../rewards/rewards";
 import type { CardRecord, CardSetup } from "./types";
 
-/** Одна трава за кожні дві правильні картки. */
+/** Одна трава за кожні дві правильні картки; у картках на пам'ять — за кожну правильну спробу. */
 export const CARDS_PER_GRASS = 2;
 
 /** Скільки спиць малювати для числа: на одну більше, ніж цифр, щоб було видно порожній розряд. */
@@ -55,7 +55,7 @@ export function creditCards(save: SaveData, credit: CardCredit): SaveData {
 
   const correct = credit.results.filter(Boolean).length;
   const loot: Loot = {};
-  addLoot(loot, "grass", Math.floor(correct / CARDS_PER_GRASS));
+  addLoot(loot, "grass", credit.setup.kind === "memory" ? correct : Math.floor(correct / CARDS_PER_GRASS));
   const record: CardRecord = {
     id: credit.id,
     finishedAt: credit.finishedAt.toISOString(),

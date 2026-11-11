@@ -3,7 +3,7 @@ import { generateDrill } from "../../core/generator/generator";
 import type { SkillId } from "../../core/rules/skills";
 import { type ModeProgress, type SaveData, emptyMode, emptySave, parseSave } from "../../storage/save";
 import { creditCards, generateCards } from "../cards/cards";
-import { DEFAULT_CARDS } from "../cards/types";
+import { DEFAULT_CARDS, cardSpan } from "../cards/types";
 import { creditSession, daysBetween, overdueDays, recordUse } from "../progress/progress";
 import { type Session, nextExample, startSession, submitAnswer } from "../session/session";
 import { toDrillConfig } from "../session/setup";
@@ -178,6 +178,25 @@ describe("заняття на сьогодні", () => {
     expect(plan[0]).toMatchObject({ done: false, cards: { kind: "set", digits: 1, count: 10 } });
     expect(plan[1]).toMatchObject({ done: false, lesson: { topic: "simple", exampleCount: 10, actionsPerExample: 3 } });
     expect(dailyPlan(emptySave(), new Date(2026, 10, 12, 17))[0]).toMatchObject({ cards: { kind: "read" } });
+    expect(dailyPlan(emptySave(), new Date(2026, 10, 13, 17))[0]).toMatchObject({
+      cards: { kind: "memory", digits: 1, count: 5, span: 2, showSeconds: 2 },
+    });
+  });
+
+  it("картки на пам'ять: числа на всі картинки, трава за кожну правильну спробу", () => {
+    const setup = { kind: "memory" as const, digits: 1 as const, count: 5, showSeconds: 2, span: 3 };
+    expect(cardSpan(setup)).toBe(3);
+    expect(cardSpan(DEFAULT_CARDS)).toBe(1);
+    expect(generateCards({ digits: 1, count: setup.count * cardSpan(setup) }, 1)).toHaveLength(15);
+    const save = creditCards(emptySave(), { id: "m", finishedAt: now, setup, results: [true, false, true, true, false] });
+    expect(save.cardLog[0]).toMatchObject({ kind: "memory", total: 5, correct: 3, earned: { grass: 3 } });
+    expect(parseSave(JSON.parse(JSON.stringify(save)))!.cardLog[0]!.kind).toBe("memory");
+  });
+
+  it("після десятків число набирають двома руками", () => {
+    const save = withSkills({ "ten:+9": skill(recordUse(emptyMode(), true, "2026-11-10")) });
+    expect(dailyPlan(save, now)[0]).toMatchObject({ cards: { kind: "set", digits: 2, twoHands: true } });
+    expect(dailyPlan(save, new Date(2026, 10, 13, 17))[0]).toMatchObject({ cards: { kind: "memory", span: 3 } });
   });
 
   it("додає повторення, коли настав час, і двоцифрові картки після десятків", () => {

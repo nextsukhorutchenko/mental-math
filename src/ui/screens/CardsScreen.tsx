@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { cardRods, generateCards } from "../../game/cards/cards";
-import { CARD_LIMITS, type CardSetup } from "../../game/cards/types";
+import { CARD_LIMITS, type CardSetup, DEFAULT_SPAN, MEMORY_SECONDS, cardSpan } from "../../game/cards/types";
 import type { Loot } from "../../game/rewards/blocks";
 import { fromNumber } from "../../core/soroban/abacus";
 import { AbacusView } from "../components/AbacusView";
@@ -45,10 +45,27 @@ function Setup({ initial, onStart }: { initial: CardSetup; onStart: (setup: Card
           options={[
             { value: "read" as const, label: "👀 Назви число за кісточками" },
             { value: "set" as const, label: "🧮 Набери число на абакусі" },
+            { value: "memory" as const, label: "🧠 Запам'ятай кілька картинок" },
           ]}
-          onChange={(kind) => set({ kind })}
+          onChange={(kind) => set({ kind, ...(kind === "memory" && setup.showSeconds === 0 ? { showSeconds: MEMORY_SECONDS } : {}) })}
         />
+        {setup.kind === "memory" && (
+          <span className="note">
+            Картинки з'являються по одній і зникають. Потім треба назвати всі числа по порядку — так тренується
+            зорова пам'ять, на яку спирається уявний абакус.
+          </span>
+        )}
       </div>
+      {setup.kind === "memory" && (
+        <div className="field">
+          <span>Скільки картинок запам'ятати</span>
+          <Choice
+            value={setup.span ?? DEFAULT_SPAN}
+            options={CARD_LIMITS.span.map((span) => ({ value: span, label: String(span) }))}
+            onChange={(span) => set({ span })}
+          />
+        </div>
+      )}
       <div className="field">
         <span>Числа</span>
         <Choice
@@ -61,14 +78,41 @@ function Setup({ initial, onStart }: { initial: CardSetup; onStart: (setup: Card
           onChange={(digits) => set({ digits })}
         />
       </div>
+      {setup.kind === "set" && setup.digits > 1 && (
+        <div className="field">
+          <span>Руки</span>
+          <Choice
+            value={setup.twoHands ? "two" : "one"}
+            options={[
+              { value: "one", label: "як зручно" },
+              { value: "two", label: "🙌 двома руками" },
+            ]}
+            onChange={(hands) => set({ twoHands: hands === "two" })}
+          />
+          <span className="note">
+            Двома руками: ліва набирає старші розряди, права — одиниці, по змозі одночасно. Це вправа на
+            узгодженість рук; за руками стежте ви, застосунок їх не бачить.
+          </span>
+        </div>
+      )}
       <div className="field">
-        <span>Кількість карток</span>
+        <span>{setup.kind === "memory" ? "Кількість спроб" : "Кількість карток"}</span>
         <Choice
           value={setup.count}
           options={[5, 10, 20, 30].map((count) => ({ value: count, label: String(count) }))}
           onChange={(count) => set({ count })}
         />
       </div>
+      {setup.kind === "memory" && (
+        <div className="field">
+          <span>Скільки показувати кожну картинку</span>
+          <Choice
+            value={setup.showSeconds || MEMORY_SECONDS}
+            options={[3, 2, 1].map((seconds) => ({ value: seconds, label: `${seconds} с` }))}
+            onChange={(showSeconds) => set({ showSeconds })}
+          />
+        </div>
+      )}
       {setup.kind === "read" && (
         <div className="field">
           <span>Скільки показувати кісточки</span>
@@ -188,7 +232,11 @@ function Play({ setup, cards, onDone }: PlayProps) {
           <div className="work-side">
             {!revealed ? (
               <>
-                <p className="prompt">Набери це число на своєму абакусі.</p>
+                <p className="prompt">
+                  {setup.twoHands
+                    ? "Набери це число двома руками: ліва — старші розряди, права — одиниці."
+                    : "Набери це число на своєму абакусі."}
+                </p>
                 <button className="btn btn-big" autoFocus onClick={() => setRevealed(true)}>
                   Готово, покажи ▶
                 </button>
@@ -222,6 +270,113 @@ function Play({ setup, cards, onDone }: PlayProps) {
   );
 }
 
+/** Картки на пам'ять: кілька картинок по черзі, потім пригадати всі числа по порядку. */
+function MemoryPlay({ setup, cards, onDone }: PlayProps) {
+  const span = cardSpan(setup);
+  const seconds = setup.showSeconds || MEMORY_SECONDS;
+  const trials = cards.length / span;
+  const [trial, setTrial] = useState(0);
+  const [results, setResults] = useState<boolean[]>([]);
+  /** −1 — чекаємо на «Старт»; 0..span−1 — показ картинок; span — пригадування. */
+  const [position, setPosition] = useState(-1);
+  const [answers, setAnswers] = useState<number[]>([]);
+  const [input, setInput] = useState("");
+
+  const numbers = cards.slice(trial * span, trial * span + span);
+  const showing = position >= 0 && position < span;
+  const recalled = answers.length === span;
+  const correct = recalled && answers.every((answer, index) => answer === numbers[index]);
+
+  useEffect(() => {
+    if (!showing) return;
+    const timer = window.setTimeout(() => setPosition((current) => current + 1), seconds * 1000);
+    return () => window.clearTimeout(timer);
+  }, [showing, position, seconds]);
+
+  const submit = () => {
+    const all = [...answers, Number(input)];
+    setAnswers(all);
+    setInput("");
+    if (all.length === span) playSound(all.every((answer, index) => answer === numbers[index]) ? "correct" : "retry");
+  };
+
+  const next = () => {
+    const all = [...results, correct];
+    if (trial + 1 >= trials) {
+      onDone(all);
+      return;
+    }
+    setResults(all);
+    setTrial(trial + 1);
+    setAnswers([]);
+    setPosition(0);
+  };
+
+  return (
+    <section className="panel">
+      <div className="progress" aria-label={`Спроба ${trial + 1} з ${trials}`}>
+        <span>
+          Спроба {trial + 1} з {trials}
+        </span>
+        <div className="progress-track">
+          <div className="progress-fill" style={{ width: `${(trial / trials) * 100}%` }} />
+        </div>
+      </div>
+
+      {position < 0 ? (
+        <div className="sequence">
+          <p className="prompt">
+            Зараз з'явиться {span} {span <= 4 ? "картинки" : "картинок"} з абакусом, кожна на {seconds} с. Запам'ятай
+            числа по порядку.
+          </p>
+          <button className="btn btn-big" autoFocus onClick={() => setPosition(0)}>
+            Старт ▶
+          </button>
+        </div>
+      ) : showing ? (
+        <div className="sequence">
+          <p className="sequence-count">
+            Картинка {position + 1} з {span}
+          </p>
+          {/* key перезапускає анімацію, щоб було видно зміну картинки */}
+          <div key={position} className="memory-picture">
+            <AbacusView abacus={fromNumber(numbers[position]!, cardRods(setup.digits))} showDigits={false} />
+          </div>
+        </div>
+      ) : !recalled ? (
+        <div className="work work-single">
+          <div className="work-side">
+            <p className="prompt">
+              Яке число було {answers.length + 1}-м? {answers.length > 0 && `Уже названо: ${answers.join(", ")}.`}
+            </p>
+            <div className="answer" aria-live="polite">
+              {input || "?"}
+            </div>
+            <Keypad value={input} maxLength={setup.digits + 1} onChange={setInput} onSubmit={submit} />
+          </div>
+        </div>
+      ) : (
+        <div className={`feedback ${correct ? "feedback-good" : "feedback-review"}`}>
+          <p className="feedback-title">{correct ? "Усе пригадала! ⭐" : "Подивімося ще раз"}</p>
+          <div className="memory-row">
+            {numbers.map((number, index) => (
+              <div key={index} className={`memory-item${answers[index] === number ? "" : " memory-miss"}`}>
+                <AbacusView abacus={fromNumber(number, cardRods(setup.digits))} />
+                <span>
+                  {answers[index] === number ? `✅ ${number}` : `❌ було ${number}, названо ${answers[index]}`}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button className="btn btn-big" autoFocus onClick={next}>
+            Далі ▶
+          </button>
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface Props {
   /** Останні налаштування або набір із плану дня. */
   initial: CardSetup;
@@ -240,7 +395,7 @@ interface Running {
 
 const begin = (setup: CardSetup): Running => {
   const seed = Math.floor(Math.random() * 2 ** 32);
-  return { setup, cards: generateCards(setup, seed), seed };
+  return { setup, cards: generateCards({ digits: setup.digits, count: setup.count * cardSpan(setup) }, seed), seed };
 };
 
 export function CardsScreen({ initial, autostart, onFinish, onExit }: Props) {
@@ -288,8 +443,9 @@ export function CardsScreen({ initial, autostart, onFinish, onExit }: Props) {
     );
   }
 
+  const Game = running.setup.kind === "memory" ? MemoryPlay : Play;
   return (
-    <Play
+    <Game
       key={running.seed}
       setup={running.setup}
       cards={running.cards}

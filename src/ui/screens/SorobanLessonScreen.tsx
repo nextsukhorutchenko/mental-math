@@ -2,7 +2,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { buildStep } from "../../core/rules/step";
 import { fromNumber } from "../../core/soroban/abacus";
 import { AbacusView } from "../components/AbacusView";
-import { Companion } from "../components/Companion";
+import { Hero } from "../components/Avatar";
 import { StepDemo } from "../components/StepDemo";
 
 /** Ланцюжок для показу пальців: +2 великим, +5 вказівним, −1 вказівним, −5 вказівним. */
@@ -38,7 +38,7 @@ export function SorobanLessonScreen({ onDone }: { onDone: () => void }) {
   const pages = [
     <>
       <h2>Це соробан</h2>
-      <Companion event="greet" variant={0} />
+      <Hero event="greet" variant={0} />
       <div className="lesson-row">
         <AbacusView abacus={fromNumber(0, 4)} showDigits={false} />
         <ul className="lesson-list">

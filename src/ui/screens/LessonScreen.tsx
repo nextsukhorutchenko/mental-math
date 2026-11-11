@@ -16,6 +16,7 @@ import {
 import type { Bonus, Loot } from "../../game/rewards/blocks";
 import { type LessonSetup, type Mode, toDrillConfig } from "../../game/session/setup";
 import { LootList } from "../components/Block";
+import { Hero } from "../components/Avatar";
 import { Companion } from "../components/Companion";
 import { playSound } from "../sound";
 import { levelById } from "../../game/curriculum/levels";
@@ -277,7 +278,7 @@ export function Summary(props: SummaryProps) {
   const reviewed = (review ?? []).map((skill) => summary.skills.find((tally) => tally.skill === skill)).filter((tally) => !!tally);
   return (
     <section className="panel">
-      <Companion event="finish" variant={summary.clean} />
+      <Hero event="finish" variant={summary.clean} cheer />
       <p className="eyebrow">
         {review ? "Повторення завершено" : mode === "mental" ? "Тренування подумки завершено" : "Тренування завершено"}
       </p>

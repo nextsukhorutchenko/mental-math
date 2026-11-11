@@ -12,7 +12,8 @@ import { weekActiveDays } from "../game/rewards/rewards";
 import type { Session } from "../game/session/session";
 import { type LessonSetup, mentalTryout, toDrillConfig } from "../game/session/setup";
 import { browserStore, loadSave, writeSave } from "../storage/localStore";
-import type { SaveData } from "../storage/save";
+import { DEFAULT_CHILD_NAME, type SaveData } from "../storage/save";
+import { PlayerBadge, PlayerContext } from "./components/Avatar";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
 import { FlashScreen } from "./screens/FlashScreen";
@@ -206,6 +207,7 @@ export function App() {
   const trainerSetup = presetTopic ? { ...save.setup, topic: presetTopic } : save.setup;
 
   return (
+    <PlayerContext.Provider value={save.childName.trim() || DEFAULT_CHILD_NAME}>
     <div className="app">
       <header className="topbar">
         <div className="logo" aria-hidden="true">
@@ -216,6 +218,7 @@ export function App() {
         </div>
         <h1>Ментальна математика</h1>
         <div className="topbar-actions">
+          <PlayerBadge />
           <button
             className="btn btn-quiet"
             aria-pressed={save.sound}
@@ -388,5 +391,6 @@ export function App() {
         )}
       </main>
     </div>
+    </PlayerContext.Provider>
   );
 }

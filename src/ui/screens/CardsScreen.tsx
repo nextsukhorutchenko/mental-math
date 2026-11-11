@@ -5,7 +5,7 @@ import type { Loot } from "../../game/rewards/blocks";
 import { fromNumber } from "../../core/soroban/abacus";
 import { AbacusView } from "../components/AbacusView";
 import { LootList } from "../components/Block";
-import { Companion } from "../components/Companion";
+import { Hero } from "../components/Avatar";
 import { Keypad } from "../components/Keypad";
 import { playSound } from "../sound";
 
@@ -412,7 +412,7 @@ export function CardsScreen({ initial, autostart, onFinish, onExit }: Props) {
     const correct = done.results.filter(Boolean).length;
     return (
       <section className="panel">
-        <Companion event="finish" variant={correct} />
+        <Hero event="finish" variant={correct} cheer />
         <p className="eyebrow">Картки завершено</p>
         <h2>
           Правильно: {correct} з {done.results.length}

@@ -16,7 +16,7 @@ import type { Mastery } from "../../game/progress/progress";
 import { WEEK_GOAL } from "../../game/rewards/rewards";
 import { type LessonSetup, mentalTryout } from "../../game/session/setup";
 import type { SaveData } from "../../storage/save";
-import { Companion } from "../components/Companion";
+import { Avatar, Hero } from "../components/Avatar";
 
 const ICONS: Record<LevelState["status"], string> = { locked: "🔒", open: "", learning: "⛏", mastered: "⭐" };
 
@@ -164,7 +164,7 @@ export function MapScreen(props: Props) {
 
   return (
     <div className="map">
-      <Companion event="greet" variant={new Date().getDate()} />
+      <Hero event="greet" variant={new Date().getDate()} />
       <Campfire days={weekDays} />
       <div className="campfire rank-strip">
         <span>
@@ -221,8 +221,13 @@ export function MapScreen(props: Props) {
                   key={level.id}
                   className={`tile tile-${level.status}${level.id === current ? " tile-current" : ""}${level.id === selected ? " tile-selected" : ""}`}
                   onClick={() => setSelected(level.id)}
-                  aria-label={`Рівень ${levelLabel(level.id)}`}
+                  aria-label={`Рівень ${levelLabel(level.id)}${level.id === current ? ", ти тут" : ""}`}
                 >
+                  {level.id === current && (
+                    <span className="tile-you" aria-hidden="true">
+                      <Avatar variant="head" />
+                    </span>
+                  )}
                   <span className="tile-label">{levelLabel(level.id)}</span>
                   <span className="tile-icon">
                     {level.skipped ? "⏭" : ICONS[level.status]}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { type Build, placeBlock, placedCount, removeBlock } from "../../game/island/island";
 import { BLOCKS, BLOCK_NAMES, type BlockId, ISLAND_COLS } from "../../game/rewards/blocks";
 import { Block } from "../components/Block";
-import { Companion } from "../components/Companion";
+import { Hero } from "../components/Avatar";
 import { playSound } from "../sound";
 
 type Tool = BlockId | "pick";
@@ -27,7 +27,7 @@ export function IslandScreen({ build, onChange }: Props) {
   return (
     <section className="panel">
       <h2>Мій острів</h2>
-      <Companion event="island" variant={Math.floor(placedCount(build.island) / 12)} />
+      <Hero event="island" variant={Math.floor(placedCount(build.island) / 12)} />
       <p className="note">
         Вибери блок і торкнися клітинки. Блоки здобуваються на заняттях; кирка забирає блок назад у запас.
       </p>

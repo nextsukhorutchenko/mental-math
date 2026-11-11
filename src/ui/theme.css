@@ -61,6 +61,110 @@ body {
   gap: 10px;
 }
 
+/* Аватар доні */
+.avatar {
+  display: block;
+  flex: none;
+  image-rendering: pixelated;
+}
+
+.avatar-cheer {
+  animation: hop 700ms ease-out 1;
+}
+
+/* Сцена «доня і Рудик»: аватар стоїть, лисеня говорить. */
+.hero {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.hero > .avatar-full {
+  height: 104px;
+  width: auto;
+  filter: drop-shadow(3px 3px 0 rgba(43, 33, 24, 0.25));
+}
+
+.hero .companion {
+  align-self: center;
+}
+
+@media (max-width: 480px) {
+  .hero > .avatar-full {
+    height: 84px;
+  }
+}
+
+/* Значок гравця у верхній панелі */
+.player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 4px 4px;
+  background: var(--stone);
+  border: var(--block) solid var(--stone-edge);
+  font-weight: 800;
+  font-size: 17px;
+  max-width: 180px;
+}
+
+.player-face {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  background: var(--sky);
+  border: 2px solid var(--stone-edge);
+}
+
+.player-face .avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 560px) {
+  .player-name {
+    display: none;
+  }
+  .player {
+    padding-right: 4px;
+  }
+}
+
+/* «Ти тут» на поточному рівні карти */
+.tile-you {
+  position: absolute;
+  top: -14px;
+  left: -12px;
+  width: 30px;
+  height: 30px;
+  background: var(--sky);
+  border: 2px solid var(--stone-edge);
+  box-shadow: 2px 2px 0 rgba(43, 33, 24, 0.3);
+  pointer-events: none;
+}
+
+.tile-you .avatar {
+  width: 100%;
+  height: 100%;
+}
+
+.certificate-avatar {
+  height: 120px;
+  width: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .avatar-cheer {
+    animation: none;
+  }
+}
+
 /* Супутник */
 .companion {
   display: flex;

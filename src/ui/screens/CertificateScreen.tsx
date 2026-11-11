@@ -1,4 +1,5 @@
 import type { Rank } from "../../game/curriculum/curriculum";
+import { Avatar } from "../components/Avatar";
 
 interface Props {
   rank: Rank;
@@ -14,6 +15,7 @@ export function CertificateScreen({ rank, childName, earnedAt, onClose }: Props)
   return (
     <section className="panel certificate-wrap">
       <div className="certificate">
+        <Avatar className="certificate-avatar" />
         <p className="certificate-top">Ментальна математика</p>
         <h2>Грамота</h2>
         <p className="certificate-name">{childName.trim() || "______________________"}</p>

@@ -122,6 +122,18 @@ describe("сумісність зі старими збереженнями", ()
   });
 });
 
+describe("ім'я для грамот", () => {
+  it("за замовчуванням — Поля, і в нових, і в старих збереженнях без імені", () => {
+    expect(emptySave().childName).toBe("Поля");
+    expect(parseSave({ ...emptySave(), childName: "" })!.childName).toBe("Поля");
+    expect(parseSave({ ...emptySave(), childName: "   " })!.childName).toBe("Поля");
+    const { childName, ...old } = emptySave();
+    void childName;
+    expect(parseSave(old)!.childName).toBe("Поля");
+    expect(parseSave({ ...emptySave(), childName: "Марійка" })!.childName).toBe("Марійка");
+  });
+});
+
 describe("резервна копія у файлі", () => {
   const now = new Date("2026-11-12T10:00:00.000Z");
 

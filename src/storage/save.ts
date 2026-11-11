@@ -111,6 +111,9 @@ export interface SaveData {
 
 export const CARD_LOG_LIMIT = 300;
 
+/** Ім'я для грамот, поки батьки не вписали інше. */
+export const DEFAULT_CHILD_NAME = "Поля";
+
 export const RECENT_LIMIT = 30;
 export const DAYS_LIMIT = 60;
 export const HISTORY_LIMIT = 1000;
@@ -132,7 +135,7 @@ export function emptySave(): SaveData {
     sound: true,
     cardLog: [],
     placement: null,
-    childName: "",
+    childName: DEFAULT_CHILD_NAME,
     introSeen: false,
     flashBest: 0,
     rankDates: {},
@@ -322,7 +325,9 @@ export function parseSave(value: unknown): SaveData | null {
     // У старих збереженнях налаштування немає — звук увімкнено.
     sound: value.sound !== false,
     placement: isLevel(value.placement) ? value.placement : null,
-    childName: typeof value.childName === "string" ? value.childName.slice(0, 40) : "",
+    // Порожнє ім'я (зокрема в збереженнях, зроблених до появи значення за замовчуванням) замінюємо типовим.
+    childName:
+      typeof value.childName === "string" && value.childName.trim() ? value.childName.slice(0, 40) : DEFAULT_CHILD_NAME,
     introSeen: value.introSeen === true,
     flashBest: isCount(value.flashBest) ? Math.min(value.flashBest, 99) : 0,
     rankDates: isObj(value.rankDates)

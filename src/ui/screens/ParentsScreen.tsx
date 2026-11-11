@@ -126,16 +126,16 @@ export function ParentsScreen(props: Props) {
       <section className="panel">
         <h2>Розряди й грамоти</h2>
         <label className="field">
-          <span>Ім’я для грамоти</span>
+          <span>Ім'я для грамоти</span>
           <input
             className="text-input"
             type="text"
             maxLength={40}
             value={save.childName}
-            placeholder="Наприклад, Софійка"
+            placeholder="Ім'я дитини"
             onChange={(event) => onChildName(event.target.value)}
           />
-          <span className="note">Ім’я зберігається лише на цьому пристрої й нікуди не надсилається.</span>
+          <span className="note">Ім'я зберігається лише на цьому пристрої й нікуди не надсилається.</span>
         </label>
         {ranks.length === 0 ? (
           <p className="note">

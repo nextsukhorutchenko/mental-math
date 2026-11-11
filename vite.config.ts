@@ -41,7 +41,22 @@ const CACHE = "mental-math-${version}";
 const PRECACHE = ${JSON.stringify(precache)};
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)));
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE);
+      // cache: "reload" — беремо файли з сервера, а не з кешу браузера, де може лежати попередня версія.
+      await cache.addAll(PRECACHE.map((url) => new Request(url, { cache: "reload" })));
+      // Сторінка мусить посилатися саме на скрипти цієї версії. Якщо сервер ще віддає стару сторінку,
+      // встановлення скасовується, і браузер спробує пізніше.
+      const shell = await cache.match("index.html");
+      const html = shell ? await shell.text() : "";
+      const scripts = PRECACHE.filter((url) => url.startsWith("assets/") && url.endsWith(".js"));
+      if (!scripts.every((url) => html.includes(url))) {
+        await caches.delete(CACHE);
+        throw new Error("Сервер ще віддає попередню версію сторінки");
+      }
+    })(),
+  );
 });
 
 self.addEventListener("activate", (event) => {

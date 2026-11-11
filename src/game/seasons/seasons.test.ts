@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { activeHoliday, availableHolidays, chooseHoliday, greeting, seasonOf } from "./seasons";
+import {
+  activeHoliday,
+  availableHolidays,
+  chooseHoliday,
+  greeting,
+  isBirthday,
+  orthodoxEaster,
+  seasonOf,
+} from "./seasons";
 
 const day = (y: number, m: number, d: number) => new Date(y, m - 1, d, 12);
 
@@ -16,7 +24,8 @@ describe("пори року", () => {
 
 describe("свята", () => {
   it("пропонують фон, коли свято близько", () => {
-    expect(availableHolidays(day(2026, 10, 31))).toEqual([]);
+    expect(availableHolidays(day(2026, 10, 10))).toEqual([]);
+    expect(availableHolidays(day(2026, 10, 31))).toEqual(["halloween"]);
     expect(availableHolidays(day(2026, 11, 12))).toEqual(["nicholas"]);
     expect(availableHolidays(day(2026, 12, 8))).toEqual(["nicholas", "christmas"]);
     expect(availableHolidays(day(2026, 12, 20))).toEqual(["christmas", "newyear"]);
@@ -37,6 +46,34 @@ describe("свята", () => {
     expect(activeHoliday(choice, day(2027, 1, 14))).toBe("newyear");
     expect(activeHoliday(choice, day(2027, 1, 15))).toBeNull();
     expect(chooseHoliday("nicholas", day(2026, 11, 12)).until).toBe("2026-12-09");
+  });
+
+  it("Великдень рахується за православною пасхалією", () => {
+    expect(orthodoxEaster(2026)).toEqual(new Date(2026, 3, 12));
+    expect(orthodoxEaster(2027)).toEqual(new Date(2027, 4, 2));
+    expect(orthodoxEaster(2028)).toEqual(new Date(2028, 3, 16));
+    expect(availableHolidays(day(2027, 4, 18))).toEqual(["easter"]);
+    expect(availableHolidays(day(2027, 4, 17))).toEqual([]);
+    expect(chooseHoliday("easter", day(2027, 5, 1)).until).toBe("2027-05-09");
+  });
+
+  it("Гелловін — з середини жовтня до 2 листопада", () => {
+    expect(availableHolidays(day(2026, 10, 15))).toEqual(["halloween"]);
+    expect(availableHolidays(day(2026, 11, 2))).toEqual(["halloween", "nicholas"]);
+    expect(availableHolidays(day(2026, 11, 3))).toEqual(["nicholas"]);
+  });
+
+  it("день народження — лише коли батьки вказали дату", () => {
+    expect(availableHolidays(day(2027, 3, 10))).toEqual([]);
+    expect(availableHolidays(day(2027, 3, 10), "03-14")).toEqual(["birthday"]);
+    expect(availableHolidays(day(2027, 3, 17), "03-14")).toEqual([]);
+    // Через Новий рік: свято 2 січня, фон доступний з 26 грудня.
+    expect(availableHolidays(day(2026, 12, 26), "01-02")).toContain("birthday");
+    expect(chooseHoliday("birthday", day(2026, 12, 26), "01-02").until).toBe("2027-01-04");
+    expect(greeting("birthday", day(2027, 3, 14), "Поля")).toBe("Поля, з днем народження!");
+    expect(isBirthday("02-29")).toBe(true);
+    expect(isBirthday("02-30")).toBe(false);
+    expect(isBirthday("3-14")).toBe(false);
   });
 
   it("поза святом фон можна лише переглянути до завтра", () => {

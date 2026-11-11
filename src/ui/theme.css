@@ -63,6 +63,25 @@ body {
   --bg-soil: #c9dceb;
 }
 
+:root[data-scene="easter"] {
+  --bg-sky-top: #8fd3ff;
+  --bg-sky-bottom: #f2fbff;
+  --bg-ground: #7cdc5a;
+}
+
+:root[data-scene="birthday"] {
+  --bg-sky-top: #ffb3d9;
+  --bg-sky-bottom: #fff3c4;
+  --bg-ground: #7cdc5a;
+}
+
+:root[data-scene="halloween"] {
+  --bg-sky-top: #2a1640;
+  --bg-sky-bottom: #e0702a;
+  --bg-ground: #4a5a2a;
+  --bg-soil: #3a2a1e;
+}
+
 .backdrop {
   position: fixed;
   inset: 0;
@@ -101,6 +120,105 @@ body {
   display: flex;
   align-items: flex-end;
   gap: 4px;
+}
+
+/* Великдень: зайчик праворуч, кошик і писанки — під деревом. */
+.scene-bunny {
+  height: min(16vh, 130px);
+}
+
+.scene-basket {
+  left: calc(max(8px, calc(50% - 440px - 230px)) + min(16vh, 130px));
+  height: min(13vh, 100px);
+}
+
+.eggs,
+.pumpkins {
+  position: absolute;
+  bottom: 64px;
+  right: calc(max(8px, calc(50% - 440px - 230px)) + min(16vh, 130px));
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.eggs svg {
+  width: 26px;
+}
+
+.eggs svg:nth-child(odd) {
+  width: 32px;
+}
+
+/* День народження: великий торт і кульки. */
+.scene-cake {
+  height: min(18vh, 150px);
+}
+
+.balloons .rise {
+  position: absolute;
+  bottom: -160px;
+  animation: rise linear infinite;
+}
+
+.rise svg {
+  display: block;
+  height: auto;
+}
+
+@keyframes rise {
+  to {
+    transform: translateY(calc(-100vh - 200px));
+  }
+}
+
+/* Гелловін: місяць, кажани, привид і гарбузи. */
+.moon {
+  position: absolute;
+  top: 8%;
+  right: 12%;
+  width: 90px;
+  height: 90px;
+  background: #fff3c4;
+  box-shadow: 0 0 40px 10px rgba(255, 243, 196, 0.35);
+}
+
+.bats .fly {
+  position: absolute;
+  left: -60px;
+  animation: fly 18s linear infinite;
+}
+
+.fly svg {
+  display: block;
+  height: auto;
+}
+
+@keyframes fly {
+  to {
+    transform: translateX(calc(100vw + 120px));
+  }
+}
+
+.scene-ghost {
+  height: min(20vh, 160px);
+  bottom: 120px;
+  opacity: 0.92;
+  animation: bob 3s ease-in-out infinite alternate;
+}
+
+@keyframes bob {
+  to {
+    transform: translateY(-18px);
+  }
+}
+
+.pumpkins svg {
+  width: 44px;
+}
+
+.pumpkins svg:nth-child(2) {
+  width: 60px;
 }
 
 /* На Різдво подарунки лежать під ялинкою. */
@@ -196,6 +314,21 @@ body {
   }
 }
 
+.birthday {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.birthday select {
+  font: inherit;
+  padding: 6px 8px;
+  border: 3px solid var(--stone-edge);
+  background: #fff;
+}
+
 .holiday-ribbon {
   margin: 0 0 12px;
   padding: 8px 14px;
@@ -219,6 +352,20 @@ body {
   .fall-spin {
     animation: none;
     transform: rotate(-20deg);
+  }
+
+  .balloons .rise {
+    bottom: var(--rest);
+    animation: none;
+  }
+
+  .bats .fly {
+    left: var(--rest);
+    animation: none;
+  }
+
+  .scene-ghost {
+    animation: none;
   }
 
   .burst i {
@@ -260,7 +407,25 @@ body {
 .topbar-actions {
   margin-left: auto;
   display: flex;
+  align-items: center;
   gap: 10px;
+}
+
+/* На вузькому екрані кнопки переходять під заголовок, щоб нічого не вилазило за край. */
+@media (max-width: 560px) {
+  .topbar {
+    flex-wrap: wrap;
+  }
+
+  .topbar-actions {
+    flex: 1 1 100%;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .topbar-actions .btn {
+    padding-inline: 10px;
+  }
 }
 
 /* Аватар доні */
@@ -323,18 +488,121 @@ body {
   height: 100%;
 }
 
+.player-face {
+  padding: 0;
+  cursor: pointer;
+}
+
 .player-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.player-rename .text-input {
+  width: 110px;
+  padding: 3px 6px;
+  border-width: 3px;
+  font-size: 16px;
+}
+
+/* Аватар у сцені — кнопка вибору скіна. */
+.hero-avatar {
+  flex: none;
+  padding: 0;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.hero-avatar .avatar-full {
+  height: 104px;
+  width: auto;
+  filter: drop-shadow(3px 3px 0 rgba(43, 33, 24, 0.25));
+}
+
+.hero-avatar:hover .avatar-full,
+.hero-avatar:focus-visible .avatar-full {
+  filter: drop-shadow(0 0 0 var(--gold)) drop-shadow(3px 3px 0 var(--gold));
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 16, 12, 0.6);
+}
+
+.skin-picker {
+  width: 100%;
+  max-width: 760px;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+}
+
+.skin-picker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.skin-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 10px;
+}
+
+.skin-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 6px 8px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: #e8e4f0;
+  background: #232a3a;
+  border: var(--block) solid var(--stone-edge);
+  cursor: pointer;
+}
+
+.skin-card .avatar {
+  height: 112px;
+  width: auto;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+.skin-card:hover {
+  background: #2e3750;
+}
+
+.skin-card-active {
+  background: #343e56;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold);
 }
 
 @media (max-width: 560px) {
   .player-name {
-    display: none;
+    max-width: 72px;
   }
   .player {
-    padding-right: 4px;
+    padding-right: 6px;
+  }
+  .hero-avatar .avatar-full {
+    height: 84px;
   }
 }
 

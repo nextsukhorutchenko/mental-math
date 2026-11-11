@@ -134,29 +134,32 @@ const NICHOLAS = [
   "...Y..BB....BB....",
 ];
 
+/** Санта: руки в червоних рукавах з білими манжетами й рукавицями опущені вздовж тулуба. */
 const SANTA = [
-  "............WW....",
-  "..........RRWW....",
-  "........RRRR......",
-  ".......RRRRR......",
-  "......WWWWWWW.....",
-  "......SSSSSSS.....",
-  "......SKSSSKS.....",
-  ".....WSSSCSSSW....",
-  ".....WWWmmmWWW....",
-  "....RWWWWWWWWWR...",
-  "...RRRWWWWWWWRRR..",
-  "..SRRRRWWWWWRRRRS.",
-  "...RRRRRWWWRRRRR..",
-  "...RRRRRRWRRRRRR..",
-  "...KKKKKKYYKKKKK..",
-  "...KKKKKKYYKKKKK..",
-  "...RRRRRRWRRRRRR..",
-  "...RRRRRRWRRRRRR..",
-  "...WWWWWWWWWWWWW..",
-  "....RRRR...RRRR...",
-  "....RRRR...RRRR...",
-  "...KKKKK...KKKKK..",
+  "................WWW...",
+  "..............RRWWW...",
+  "...........RRRRR......",
+  ".........RRRRRRR......",
+  "........RRRRRRRR......",
+  ".......WWWWWWWWWW.....",
+  ".......SSSSSSSSSS.....",
+  ".......SSKKSSKKSS.....",
+  ".......WSSSCCSSSW.....",
+  ".......WWWmmmmWWW.....",
+  "......WWWWWWWWWWWW....",
+  "....RRRWWWWWWWWWWRRR..",
+  "...RRRRRWWWWWWWWRRRRR.",
+  "..RRRRRRRWWWWWWRRRRRRR",
+  "..RRR.RRRRWWWWRRRR.RRR",
+  "..RRR.RRRRRWWRRRRR.RRR",
+  "..RRR.KKKKKYYKKKKK.RRR",
+  "..WWW.KKKKKYYKKKKK.WWW",
+  "..GGG.RRRRRWWRRRRR.GGG",
+  "..GGG.RRRRRWWRRRRR.GGG",
+  "......WWWWWWWWWWWW....",
+  ".......RRRR..RRRR.....",
+  ".......RRRR..RRRR.....",
+  "......KKKKK..KKKKK....",
 ];
 
 const GIFT = ["..Y.Y.", "...Y..", "AAAYAA", "AAAYAA", "YYYYYY", "AAAYAA", "AAAYAA"];
@@ -193,7 +196,144 @@ const FIGURE_COLORS: Palette = {
   r: "#8f1f1a",
   B: "#3b2a1e",
   C: "#eba8a8",
+  G: "#2f7d3a",
 };
+
+/** Писанки: однаковий візерунок у різних кольорах. */
+const EGG = [
+  "..XXXX..",
+  ".XXXXXX.",
+  "XXAXXAXX",
+  "YYYYYYYY",
+  "XAXAXAXA",
+  "AXAXAXAX",
+  "YYYYYYYY",
+  "XXXAAXXX",
+  ".XXXXXX.",
+  "..XXXX..",
+];
+const EGG_COLORS: Palette[] = [
+  { X: "#d9482b", Y: "#ffd84a", A: "#ffffff" },
+  { X: "#3f7fd9", Y: "#ffffff", A: "#ffd84a" },
+  { X: "#3d9a4a", Y: "#ffd84a", A: "#ffffff" },
+  { X: "#b85cf0", Y: "#ffffff", A: "#ffd84a" },
+];
+
+/** Кошик із паскою й писанками. */
+const BASKET = [
+  "......WWWW......",
+  ".....WyWWrW.....",
+  "....WWWWWWWW....",
+  "....PPPPPPPP....",
+  "..XXPPPPPPPPZZ..",
+  ".XXXPPPPPPPPZZZ.",
+  "BBBBBBBBBBBBBBBB",
+  "BbBbBbBbBbBbBbBb",
+  ".BbBbBbBbBbBbBb.",
+  "..BBBBBBBBBBBB..",
+];
+const BASKET_COLORS: Palette = {
+  W: "#fffaf0",
+  y: "#ffd84a",
+  r: "#ff6fae",
+  P: "#c98a3c",
+  X: "#d9482b",
+  Z: "#3f7fd9",
+  B: "#a36a2c",
+  b: "#7a4a22",
+};
+
+const BUNNY = [
+  "..W.....W...",
+  ".WPW...WPW..",
+  ".WPW...WPW..",
+  ".WPW...WPW..",
+  "..WWWWWWW...",
+  ".WWWWWWWWW..",
+  ".WWKWWWKWW..",
+  ".WWWWPWWWW..",
+  "..WWWWWWW...",
+  ".WWWWWWWWW..",
+  "WWWWWWWWWWW.",
+  "WWWWWWWWWWWW",
+  ".WWW...WWW..",
+];
+const BUNNY_COLORS: Palette = { W: "#ffffff", P: "#f7a8c4", K: "#2b2118" };
+
+/** Торт зі свічками: полум'я мерехтить. */
+const CAKE = [
+  "...F....F....F...",
+  "...c....c....c...",
+  "...c....c....c...",
+  "..WWWWWWWWWWWWW..",
+  ".WWPWWPWWWPWWPWW.",
+  ".RRRRRRRRRRRRRRR.",
+  ".RRRRyRRRRRyRRRR.",
+  ".WWWWWWWWWWWWWWW.",
+  ".RRRRRRRRRRRRRRR.",
+  ".RRyRRRRRyRRRRyR.",
+  "GGGGGGGGGGGGGGGGG",
+];
+const CAKE_COLORS: Palette = {
+  F: "#ffb02e",
+  c: "#5ab8ff",
+  W: "#fffaf0",
+  P: "#ff8ac0",
+  R: "#ff6fae",
+  y: "#ffd84a",
+  G: "#d6d0c4",
+};
+
+const BALLOON = [
+  "..XXX..",
+  ".XXXXX.",
+  "XXLXXXX",
+  "XLXXXXX",
+  "XXXXXXX",
+  ".XXXXX.",
+  "..XXX..",
+  "...X...",
+  "...S...",
+  "....S..",
+  "...S...",
+  "..S....",
+  "...S...",
+];
+const BALLOON_TINTS = ["#ff4f4f", "#ffd84a", "#5ab8ff", "#7cdc5a", "#b85cf0", "#ff8ac0"];
+
+/** Ліхтар-гарбуз зі світлим обличчям. */
+const PUMPKIN = [
+  ".....gg.....",
+  "......g.....",
+  "..OOOoOOOO..",
+  ".OOOOoOOOOO.",
+  "OOFFOoOOFFOO",
+  "OOFFOoOOFFOO",
+  "OOOOOFFOOOOO",
+  "OOFOFOFOFFOO",
+  "OOFFFFFFFFOO",
+  ".OOOOOOOOOO.",
+  "..OOOOOOOO..",
+];
+const PUMPKIN_COLORS: Palette = { O: "#f07a1a", o: "#c95b0c", g: "#3d9a4a", F: "#ffe066" };
+
+/** Добрий привид: усміхається й рум'яніє. */
+const GHOST = [
+  "...WWWW...",
+  "..WWWWWW..",
+  ".WWWWWWWW.",
+  ".WKWWWWKW.",
+  ".WKWWWWKW.",
+  ".CWWmmWWC.",
+  "WWWWWWWWWW",
+  "WWWWWWWWWW",
+  "WWWWWWWWWW",
+  "WW.WWW.WWW",
+  "W...W...W.",
+];
+const GHOST_COLORS: Palette = { W: "#f6f3ff", K: "#2b2118", C: "#f7a8c4", m: "#c98e86" };
+
+const BAT = ["X.........X", "XX..X.X..XX", "XXXXXXXXXXX", ".XXX.X.XXX.", "..X.....X.."];
 
 /** Детерміновані позиції частинок: однакові при кожному показі, без випадковості в рендері. */
 const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
@@ -205,7 +345,9 @@ const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
   tint: i % 3,
 }));
 
-function Falling({ kind }: { kind: "leaf" | "snow" | "petal" }) {
+const CONFETTI = ["#ff4f4f", "#ffd84a", "#5ab8ff", "#7cdc5a", "#b85cf0", "#ff8ac0"];
+
+function Falling({ kind }: { kind: "leaf" | "snow" | "petal" | "confetti" }) {
   const leafTints = [
     { L: "#f2c230", l: "#e88a1e", S: "#7a4a22" },
     { L: "#e88a1e", l: "#c8452a", S: "#7a4a22" },
@@ -233,6 +375,14 @@ function Falling({ kind }: { kind: "leaf" | "snow" | "petal" }) {
             <Sprite rows={SNOWFLAKE} colors={{ W: "#ffffff" }} style={{ width: p.size * 0.8 }} className="fall-spin" />
           )}
           {kind === "petal" && <Sprite rows={PETAL} colors={{ P: "#f7b8d2", p: "#ffffff" }} style={{ width: p.size * 0.6 }} />}
+          {kind === "confetti" && (
+            <Sprite
+              rows={["XX", "XX", "XX"]}
+              colors={{ X: CONFETTI[i % CONFETTI.length]! }}
+              style={{ width: p.size * 0.45 }}
+              className="fall-spin"
+            />
+          )}
         </span>
       ))}
     </div>
@@ -267,11 +417,95 @@ function Fireworks() {
 
 const STARS = Array.from({ length: 26 }, (_, i) => ({ left: (i * 41 + 7) % 100, top: (i * 23 + 5) % 45 }));
 
+/** Кульки повільно здіймаються вгору, кожна у своєму місці й темпі. */
+function Balloons() {
+  return (
+    <div className="balloons">
+      {BALLOON_TINTS.concat(BALLOON_TINTS).map((tint, i) => (
+        <span
+          key={i}
+          className="rise"
+          style={
+            {
+              left: `${(i * 23 + 4) % 96}%`,
+              animationDelay: `${-((i * 2.3) % 16)}s`,
+              animationDuration: `${14 + ((i * 3) % 7)}s`,
+              "--rest": `${10 + ((i * 31) % 60)}vh`,
+            } as CSSProperties
+          }
+        >
+          <Sprite rows={BALLOON} colors={{ X: tint, L: "#ffffff", S: "#6b5a48" }} style={{ width: 34 + (i % 3) * 8 }} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** Кажани пролітають небом. */
+function Bats() {
+  return (
+    <div className="bats">
+      {[0, 1, 2, 3].map((i) => (
+        <span
+          key={i}
+          className="fly"
+          style={
+            { top: `${8 + i * 9}%`, animationDelay: `${-i * 4.5}s`, "--rest": `${15 + i * 22}vw` } as CSSProperties
+          }
+        >
+          <Sprite rows={BAT} colors={{ X: "#241733" }} style={{ width: 44 - i * 6 }} />
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Backdrop({ season, holiday }: { season: Season; holiday: HolidayId | null }) {
-  const winterish = holiday !== null || season === "winter";
+  const winter = holiday === "nicholas" || holiday === "christmas" || holiday === "newyear";
+  if (holiday === "easter") {
+    return (
+      <div className="backdrop" aria-hidden="true">
+        <Sprite rows={LEAFY_TREE} colors={TREE_COLORS.spring} className="scene scene-left scene-tree" />
+        <Sprite rows={BUNNY} colors={BUNNY_COLORS} className="scene scene-right scene-bunny" />
+        <Sprite rows={BASKET} colors={BASKET_COLORS} className="scene scene-basket" />
+        <div className="eggs">
+          {EGG_COLORS.map((colors, i) => (
+            <Sprite key={i} rows={EGG} colors={colors} />
+          ))}
+        </div>
+        <Falling kind="petal" />
+      </div>
+    );
+  }
+  if (holiday === "birthday") {
+    return (
+      <div className="backdrop" aria-hidden="true">
+        <Sprite rows={LEAFY_TREE} colors={TREE_COLORS.summer} className="scene scene-left scene-tree scene-small" />
+        <Sprite rows={CAKE} colors={CAKE_COLORS} lights="F" className="scene scene-right scene-cake" />
+        <Balloons />
+        <Falling kind="confetti" />
+      </div>
+    );
+  }
+  if (holiday === "halloween") {
+    return (
+      <div className="backdrop" aria-hidden="true">
+        <i className="moon" />
+        <Bats />
+        <Sprite rows={BARE_TREE} colors={{ ...TRUNK, T: "#3a2a3f", t: "#2a1d2e" }} className="scene scene-left scene-tree" />
+        <Sprite rows={GHOST} colors={GHOST_COLORS} className="scene scene-right scene-ghost" />
+        <div className="pumpkins">
+          <Sprite rows={PUMPKIN} colors={PUMPKIN_COLORS} lights="F" />
+          <Sprite rows={PUMPKIN} colors={PUMPKIN_COLORS} lights="F" />
+          <Sprite rows={PUMPKIN} colors={PUMPKIN_COLORS} lights="F" />
+        </div>
+        <Falling kind="leaf" />
+      </div>
+    );
+  }
   return (
     <div className="backdrop" aria-hidden="true">
-      {holiday && (
+      {winter && (
         <div className="stars">
           {STARS.map((star, i) => (
             <i key={i} style={{ left: `${star.left}%`, top: `${star.top}%`, animationDelay: `${(i % 7) * 0.4}s` }} />
@@ -318,7 +552,7 @@ export function Backdrop({ season, holiday }: { season: Season; holiday: Holiday
       )}
 
       {season === "autumn" && !holiday && <Falling kind="leaf" />}
-      {winterish && <Falling kind="snow" />}
+      {(winter || season === "winter") && <Falling kind="snow" />}
       {season === "spring" && !holiday && <Falling kind="petal" />}
     </div>
   );

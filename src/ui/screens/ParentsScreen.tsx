@@ -35,11 +35,66 @@ interface Props {
   season: Season;
   holiday: HolidayId | null;
   onBackdrop: (holiday: HolidayId | null) => void;
+  onBirthday: (birthday: string | null) => void;
 }
 
-function BackdropPanel({ season, holiday, onBackdrop }: Pick<Props, "season" | "holiday" | "onBackdrop">) {
+const MONTHS = [
+  "січня",
+  "лютого",
+  "березня",
+  "квітня",
+  "травня",
+  "червня",
+  "липня",
+  "серпня",
+  "вересня",
+  "жовтня",
+  "листопада",
+  "грудня",
+];
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** День народження: день і місяць без року, щоб фон вмикався щороку. */
+function BirthdayPicker({ value, onChange }: { value: string | null; onChange: (birthday: string | null) => void }) {
+  const [month, day] = value ? (value.split("-").map(Number) as [number, number]) : [0, 0];
+  const update = (nextMonth: number, nextDay: number) => {
+    if (!nextMonth || !nextDay) return onChange(null);
+    // 31 квітня → 30 квітня: день не може бути більшим, ніж днів у місяці (лютий — з 29-м).
+    const last = new Date(2024, nextMonth, 0).getDate();
+    onChange(`${pad(nextMonth)}-${pad(Math.min(nextDay, last))}`);
+  };
+  return (
+    <div className="birthday">
+      <span>🎂 День народження:</span>
+      <select aria-label="День" value={day} onChange={(event) => update(month || 1, Number(event.target.value))}>
+        <option value={0}>день</option>
+        {Array.from({ length: 31 }, (_, i) => (
+          <option key={i + 1} value={i + 1}>
+            {i + 1}
+          </option>
+        ))}
+      </select>
+      <select aria-label="Місяць" value={month} onChange={(event) => update(Number(event.target.value), day || 1)}>
+        <option value={0}>місяць</option>
+        {MONTHS.map((name, i) => (
+          <option key={name} value={i + 1}>
+            {name}
+          </option>
+        ))}
+      </select>
+      {value && (
+        <button className="btn btn-quiet" onClick={() => onChange(null)}>
+          Прибрати
+        </button>
+      )}
+    </div>
+  );
+}
+
+function BackdropPanel(props: Pick<Props, "season" | "holiday" | "onBackdrop" | "onBirthday"> & { birthday: string | null }) {
+  const { season, holiday, onBackdrop, birthday, onBirthday } = props;
   const now = new Date();
-  const available = availableHolidays(now);
+  const available = availableHolidays(now, birthday);
   return (
     <section className="panel">
       <h2>Фон застосунку</h2>
@@ -62,6 +117,11 @@ function BackdropPanel({ season, holiday, onBackdrop }: Pick<Props, "season" | "
           До цього свята ще далеко, тому фон увімкнено лише для перегляду — до кінця завтрашнього дня.
         </p>
       )}
+      <BirthdayPicker value={birthday} onChange={onBirthday} />
+      <p className="note">
+        За тиждень до дня народження вгорі з'явиться кнопка святкового фону з кульками й тортом. Великдень
+        рахується сам щороку, Гелловін — наприкінці жовтня.
+      </p>
     </section>
   );
 }
@@ -223,7 +283,13 @@ export function ParentsScreen(props: Props) {
         </div>
       </section>
 
-      <BackdropPanel season={props.season} holiday={props.holiday} onBackdrop={props.onBackdrop} />
+      <BackdropPanel
+        season={props.season}
+        holiday={props.holiday}
+        onBackdrop={props.onBackdrop}
+        birthday={save.birthday}
+        onBirthday={props.onBirthday}
+      />
 
       <BackupPanel save={save} onReplace={onReplace} onExported={onExported} />
     </>

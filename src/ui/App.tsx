@@ -22,7 +22,7 @@ import {
   greeting,
   seasonOf,
 } from "../game/seasons/seasons";
-import { PlayerBadge, PlayerContext } from "./components/Avatar";
+import { type Player, PlayerBadge, PlayerContext, SkinPicker } from "./components/Avatar";
 import { Backdrop } from "./components/Backdrop";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
@@ -69,6 +69,7 @@ export function App() {
   /** Світ, грамоту за який зараз показуємо. */
   const [certWorld, setCertWorld] = useState<string | null>(null);
   const [cardsRun, setCardsRun] = useState<{ setup: CardSetup; key: number } | null>(null);
+  const [pickingSkin, setPickingSkin] = useState(false);
 
   // Кожна зміна прогресу одразу пишеться в сховище; невдачу показуємо батькам.
   useEffect(() => {
@@ -87,12 +88,12 @@ export function App() {
   const today = new Date();
   const season = seasonOf(today);
   const holiday = activeHoliday(save.backdrop, today);
-  const holidays = availableHolidays(today);
+  const holidays = availableHolidays(today, save.birthday);
   useEffect(() => {
     document.documentElement.dataset.scene = holiday ?? season;
   }, [holiday, season]);
   const setBackdrop = (id: HolidayId | null) =>
-    setSave((current) => ({ ...current, backdrop: id ? chooseHoliday(id, new Date()) : null }));
+    setSave((current) => ({ ...current, backdrop: id ? chooseHoliday(id, new Date(), current.birthday) : null }));
   // Кнопка у верхній панелі по черзі перемикає доступні зараз свята й звичайний фон.
   const holidayOrder: (HolidayId | null)[] = [null, ...holidays];
   const nextHoliday = holidayOrder[(holidayOrder.indexOf(holiday) + 1) % holidayOrder.length] ?? null;
@@ -235,13 +236,30 @@ export function App() {
       ? { ...save.setup, topic: levelById(presetTopic)!.skill!, level: undefined }
       : { ...save.setup, topic: "simple", level: presetTopic, pacing: "all" };
 
+  const player: Player = {
+    name: save.childName.trim() || DEFAULT_CHILD_NAME,
+    skin: save.skin,
+    onPickSkin: () => setPickingSkin(true),
+    onRename: (childName) => setSave((current) => ({ ...current, childName })),
+  };
+
   return (
-    <PlayerContext.Provider value={save.childName.trim() || DEFAULT_CHILD_NAME}>
+    <PlayerContext.Provider value={player}>
     <Backdrop season={season} holiday={holiday} />
+    {pickingSkin && (
+      <SkinPicker
+        onPick={(skin) => {
+          setSave((current) => ({ ...current, skin }));
+          setPickingSkin(false);
+        }}
+        onClose={() => setPickingSkin(false)}
+      />
+    )}
     <div className="app">
       {holiday && !inLesson && (
         <p className="holiday-ribbon">
-          {HOLIDAYS[holiday].icon} {greeting(holiday, today)} {HOLIDAYS[holiday].icon}
+          {HOLIDAYS[holiday].icon} {greeting(holiday, today, save.childName.trim() || DEFAULT_CHILD_NAME)}{" "}
+          {HOLIDAYS[holiday].icon}
         </p>
       )}
       <header className="topbar">
@@ -408,6 +426,7 @@ export function App() {
             season={season}
             holiday={holiday}
             onBackdrop={setBackdrop}
+            onBirthday={(birthday) => setSave((current) => ({ ...current, birthday }))}
             onPlacement={() => setScreen("placement")}
             onResetPlacement={() => setSave((current) => ({ ...current, placement: null }))}
           />

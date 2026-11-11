@@ -18,7 +18,8 @@ import {
   starterInventory,
 } from "../game/rewards/blocks";
 import type { CardRecord } from "../game/cards/types";
-import { type BackdropChoice, HOLIDAY_IDS, type HolidayId } from "../game/seasons/seasons";
+import { type BackdropChoice, HOLIDAY_IDS, type HolidayId, isBirthday } from "../game/seasons/seasons";
+import { DEFAULT_SKIN, isSkinId } from "../game/skins/skins";
 import { LEVEL_IDS, TRACK_IDS } from "../game/curriculum/levels";
 import {
   DEFAULT_SETUP,
@@ -113,6 +114,10 @@ export interface SaveData {
   rankDates: Record<string, string>;
   /** Увімкнений святковий фон; null — фон за порою року. */
   backdrop: BackdropChoice | null;
+  /** День народження дитини (ММ-ДД) для святкового фону; null — не вказано. */
+  birthday: string | null;
+  /** Вибраний скін гравця. */
+  skin: string;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -146,6 +151,8 @@ export function emptySave(): SaveData {
     flashBest: 0,
     rankDates: {},
     backdrop: null,
+    birthday: null,
+    skin: DEFAULT_SKIN,
   };
 }
 
@@ -359,6 +366,8 @@ export function parseSave(value: unknown): SaveData | null {
       isObj(value.backdrop) && HOLIDAY_IDS.includes(value.backdrop.holiday as HolidayId) && isDay(value.backdrop.until)
         ? { holiday: value.backdrop.holiday as HolidayId, until: value.backdrop.until }
         : null,
+    birthday: isBirthday(value.birthday) ? value.birthday : null,
+    skin: isSkinId(value.skin) ? value.skin : DEFAULT_SKIN,
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

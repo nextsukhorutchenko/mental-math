@@ -1,73 +1,17 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { CompanionEvent } from "../../game/companion/phrases";
+import { DEFAULT_SKIN, SKINS, skinById } from "../../game/skins/skins";
 import { Companion } from "./Companion";
 
-/** Ім'я гравця для підписів аватара; задається в App з налаштувань батьків. */
-export const PlayerContext = createContext("Поля");
+/** Гравець: ім'я, вибраний скін і дії, щоб їх змінити (задаються в App). */
+export interface Player {
+  name: string;
+  skin: string;
+  onPickSkin?: () => void;
+  onRename?: (name: string) => void;
+}
 
-/**
- * Аватар доні з гри: піксельний спрайт 16×34 у пропорціях блокового персонажа
- * (голова 8×8, тулуб 8×12, ноги 4×12, руки по 4 клітинки).
- * Кольори зняті з її скіна; ліва рука й лапка помаранчеві, права — коричневі, як в оригіналі.
- */
-const SPRITE = [
-  "....WW....WW....",
-  "....WP....PW....",
-  "....HHHHHHHH....",
-  "....HHDHHHDH....",
-  "....HDHHHHHH....",
-  "....HSSHSSSH....",
-  "....HLBSSLBH....",
-  "....HKBSSKBH....",
-  "....HCSSSSCH....",
-  "....HSSmmSSH....",
-  "SSSSHTTTTTTHSSSS",
-  "SSSSHTTTTRTHSSSS",
-  "SSSSDOTONTNDSSSS",
-  "sSSsDKOKKNKDsSSs",
-  "OoOoTOoONNNTGgGg",
-  "OoOoTTOTTNTTGgGg",
-  "WWWWTTTTTTTTWWWW",
-  "OOOOTTTTTTTTGGGG",
-  "OOOOkkkkkkkkGGGG",
-  "OOOOkkkkkkkkGGGG",
-  "oOOokkkkkkkkgGGg",
-  "....kkkkkkkk....",
-  "....SSSSSSSS....",
-  "....SSSSSSSS....",
-  "....SSSSSSSS....",
-  "....sSSssSSs....",
-  "....SSSSSSSS....",
-  "....WWWWWWWW....",
-  "....WWWWWWWW....",
-  "....WWWWWWWW....",
-  "....OOOOGGGG....",
-  "....OOOOGGGG....",
-  "....OOOOGGGG....",
-  "....oOoOgGgG....",
-];
-
-const COLORS: Record<string, string> = {
-  W: "#f4ece2", // вушка, шкарпетки, манжети
-  P: "#f2a7b5", // рожеве у вушках
-  H: "#6f5a4e", // волосся
-  D: "#523f36", // тінь волосся
-  S: "#f0d6c4", // шкіра
-  s: "#dfbfac", // тінь шкіри
-  L: "#ffffff", // відблиск в оці
-  B: "#4f7695", // очі
-  K: "#22303a", // зіниця
-  C: "#eba8a8", // рум'янець
-  m: "#c98e86", // рот
-  T: "#fbf6ee", // футболка
-  O: "#e8a12c", // помаранчевий котик і ліва лапка
-  o: "#b8741c", // смужки
-  N: "#7f6159", // коричневий котик
-  R: "#ec8fa5", // сердечко
-  G: "#8c7064", // права лапка
-  g: "#6a534a", // тінь правої лапки
-  k: "#24201e", // спідничка
-};
+export const PlayerContext = createContext<Player>({ name: "Поля", skin: DEFAULT_SKIN });
 
 interface Props {
   /** full — увесь персонаж; head — лише голова з вушками (для значків). */
@@ -75,37 +19,121 @@ interface Props {
   /** Радіє: підстрибує один раз (не для тих, хто вимкнув анімації). */
   cheer?: boolean;
   className?: string;
+  /** Інший скін замість вибраного — для попереднього перегляду у виборі. */
+  skin?: string;
 }
 
-export function Avatar({ variant = "full", cheer = false, className = "" }: Props) {
-  const name = useContext(PlayerContext);
+/** Піксельний аватар гравця за вибраним скіном. */
+export function Avatar({ variant = "full", cheer = false, className = "", skin }: Props) {
+  const player = useContext(PlayerContext);
+  const { name, sprite } = skinById(skin ?? player.skin);
   const viewBox = variant === "head" ? "3 0 10 10" : "0 0 16 34";
   return (
     <svg
       className={`avatar avatar-${variant}${cheer ? " avatar-cheer" : ""} ${className}`}
       viewBox={viewBox}
       role="img"
-      aria-label={`Аватар: ${name}`}
+      aria-label={skin ? `Скін «${name}»` : `Аватар: ${player.name}`}
       shapeRendering="crispEdges"
     >
-      {SPRITE.flatMap((row, y) =>
+      {sprite.rows.flatMap((row, y) =>
         [...row].map((cell, x) =>
-          cell === "." ? null : <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={COLORS[cell]} />,
+          cell === "." ? null : <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={sprite.colors[cell]} />,
         ),
       )}
     </svg>
   );
 }
 
-/** Значок гравця для верхньої панелі: голова аватара та ім'я. */
+/** Значок гравця у верхній панелі: голова відкриває вибір скіна, ім'я можна змінити дотиком. */
 export function PlayerBadge() {
-  const name = useContext(PlayerContext);
+  const { name, onPickSkin, onRename } = useContext(PlayerContext);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(name);
+  const input = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editing) input.current?.select();
+  }, [editing]);
+
+  const save = () => {
+    onRename?.(draft.trim().slice(0, 40) || name);
+    setEditing(false);
+  };
+
   return (
-    <div className="player" title={name}>
-      <span className="player-face">
+    <div className="player">
+      <button className="player-face" onClick={onPickSkin} aria-label="Вибрати скін" title="Вибрати скін">
         <Avatar variant="head" />
-      </span>
-      <span className="player-name">{name}</span>
+      </button>
+      {editing ? (
+        <form
+          className="player-rename"
+          onSubmit={(event) => {
+            event.preventDefault();
+            save();
+          }}
+        >
+          <input
+            ref={input}
+            className="text-input"
+            value={draft}
+            maxLength={40}
+            aria-label="Ім'я"
+            onChange={(event) => setDraft(event.target.value)}
+            onBlur={save}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setEditing(false);
+            }}
+          />
+        </form>
+      ) : (
+        <button
+          className="player-name"
+          title="Змінити ім'я"
+          aria-label={`Ім'я: ${name}. Змінити`}
+          onClick={() => {
+            setDraft(name);
+            setEditing(true);
+          }}
+        >
+          {name} ✎
+        </button>
+      )}
+    </div>
+  );
+}
+
+/** Вибір скіна: сітка фігурок, вибраний підсвічено. */
+export function SkinPicker({ onPick, onClose }: { onPick: (skin: string) => void; onClose: () => void }) {
+  const { skin: current } = useContext(PlayerContext);
+  useEffect(() => {
+    const close = (event: KeyboardEvent) => event.key === "Escape" && onClose();
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [onClose]);
+  return (
+    <div className="modal" role="dialog" aria-modal="true" aria-label="Вибір скіна" onClick={onClose}>
+      <section className="panel skin-picker" onClick={(event) => event.stopPropagation()}>
+        <div className="skin-picker-head">
+          <h2>Вибери скін</h2>
+          <button className="btn btn-quiet" onClick={onClose} aria-label="Закрити">
+            ✕
+          </button>
+        </div>
+        <div className="skin-grid">
+          {SKINS.map((skin) => (
+            <button
+              key={skin.id}
+              className={`skin-card${skin.id === current ? " skin-card-active" : ""}`}
+              aria-pressed={skin.id === current}
+              onClick={() => onPick(skin.id)}
+            >
+              <Avatar skin={skin.id} />
+              <span>{skin.name}</span>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
@@ -113,12 +141,19 @@ export function PlayerBadge() {
 /**
  * Сцена «доня і Рудик»: аватар стоїть поруч із супутником, який говорить репліку.
  * Використовується в ключових моментах (привітання, острів, підсумок), а не під час рахунку,
- * щоб не відволікати від прикладу.
+ * щоб не відволікати від прикладу. Дотик до аватара відкриває вибір скіна.
  */
 export function Hero({ event, variant = 0, cheer = false }: { event: CompanionEvent; variant?: number; cheer?: boolean }) {
+  const { onPickSkin } = useContext(PlayerContext);
   return (
     <div className="hero">
-      <Avatar cheer={cheer} />
+      {onPickSkin ? (
+        <button className="hero-avatar" onClick={onPickSkin} aria-label="Вибрати скін" title="Вибрати скін">
+          <Avatar cheer={cheer} />
+        </button>
+      ) : (
+        <Avatar cheer={cheer} />
+      )}
       <Companion event={event} variant={variant} />
     </div>
   );

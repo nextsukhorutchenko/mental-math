@@ -98,6 +98,8 @@ self.addEventListener("fetch", (event) => {
 export default defineConfig({
   // Відносні шляхи: застосунок працює і з кореня сайту, і з підпапки.
   base: "./",
+  // Дата збірки показується в розділі «Для батьків», щоб легко звірити версію на пристрої.
+  define: { __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()) },
   plugins: [react(), offlinePlugin()],
   test: {
     include: ["src/**/*.test.ts"],

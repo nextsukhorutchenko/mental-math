@@ -1,5 +1,6 @@
 import { type ChangeEvent, useRef, useState } from "react";
 import { trackTitle } from "../../game/curriculum/levels";
+import { APP_BUILT_AT } from "../pwa";
 import { localDay } from "../../game/progress/progress";
 import { BEFORE_IMPORT_KEY, browserStore, writeSave } from "../../storage/localStore";
 import { type SaveData, parseExportText, toExportText } from "../../storage/save";
@@ -102,6 +103,10 @@ export function BackupPanel({ save, onReplace, onExported }: Props) {
         <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={importFile} />
       </div>
       {message && <p className="banner">{message}</p>}
+      <p className="note">
+        Версія застосунку від {formatDate(APP_BUILT_AT)}. Якщо чогось нового не видно, закрийте застосунок і відкрийте
+        знову з інтернетом — з'явиться кнопка «Оновити».
+      </p>
     </section>
   );
 }

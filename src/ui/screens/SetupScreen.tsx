@@ -24,6 +24,15 @@ const isFactLevel = (id: string | undefined) => {
   return kind === "multiply" || kind === "divide";
 };
 
+/** Вид тренування — перший і найпомітніший вибір у тренажері. */
+type TrainerKind = "chain" | "multiply" | "divide";
+const KINDS: { value: TrainerKind; label: string }[] = [
+  { value: "chain", label: "➕➖ Додавання й віднімання" },
+  { value: "multiply", label: "✖ Множення" },
+  { value: "divide", label: "➗ Ділення" },
+];
+const firstLevelOf = (kind: "multiply" | "divide") => LEVELS.find((level) => level.kind === kind)!.id;
+
 const FAMILIES: SkillFamily[] = ["simple", "five", "ten", "mix"];
 const COUNT_PRESETS = [5, 10, 20, 30, 50];
 
@@ -87,11 +96,24 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
   const set = (patch: Partial<LessonSetup>) => setSetup({ ...setup, ...patch });
   // Для множення й ділення тема — це рівень; для додавання й віднімання — прийом.
   const fact = isFactLevel(setup.level);
+  const kind: TrainerKind = fact ? (levelById(setup.level)!.kind as TrainerKind) : "chain";
   const topicValue = fact ? setup.level! : setup.topic;
   const mastery = masteryOf(skills[topicValue]?.[setup.mode], setup.mode);
+  // Остання вибрана тема кожного виду, щоб перемикання туди-назад її не губило.
+  const [lastFact, setLastFact] = useState<Record<"multiply" | "divide", string>>(() => ({
+    multiply: kind === "multiply" ? setup.level! : firstLevelOf("multiply"),
+    divide: kind === "divide" ? setup.level! : firstLevelOf("divide"),
+  }));
   const chooseTopic = (value: string) => {
-    if (isFactLevel(value)) set({ level: value, topic: "simple", pacing: "all" });
-    else set({ topic: value as SkillId, level: undefined });
+    const level = levelById(value);
+    if (level && (level.kind === "multiply" || level.kind === "divide")) {
+      setLastFact({ ...lastFact, [level.kind]: value });
+      set({ level: value, pacing: "all" });
+    } else set({ topic: value as SkillId, level: undefined });
+  };
+  const chooseKind = (next: TrainerKind) => {
+    if (next === "chain") set({ level: undefined });
+    else set({ level: lastFact[next], pacing: "all" });
   };
   /** Рівень зберігаємо лише для множення й ділення, щоб формули йшли звичним шляхом. */
   const start = () => {
@@ -112,10 +134,15 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
         Тут можна зібрати власне тренування: будь-яка тема, від формул додавання й віднімання до множення й ділення.
       </p>
 
+      <div className="field">
+        <span>Що тренуємо</span>
+        <Choice value={kind} options={KINDS} onChange={chooseKind} />
+      </div>
+
       <label className="field">
         <span>Тема</span>
         <select value={topicValue} onChange={(event) => chooseTopic(event.target.value)}>
-          {FAMILIES.map((name) => (
+          {kind === "chain" && FAMILIES.map((name) => (
             <optgroup key={name} label={familyTitle(name)}>
               {ALL_SKILLS.filter((id) => skillFamily(id) === name).map((id) => (
                 <option key={id} value={id}>
@@ -125,7 +152,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
               ))}
             </optgroup>
           ))}
-          {FACT_GROUPS.map((group) => (
+          {FACT_GROUPS.filter((group) => group.kind === kind).map((group) => (
             <optgroup key={group.kind} label={group.title}>
               {LEVELS.filter((level) => level.kind === group.kind).map((level) => (
                 <option key={level.id} value={level.id}>

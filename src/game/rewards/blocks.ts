@@ -49,14 +49,62 @@ export function shapesFor(block: BlockId): Shape[] {
   return block === "stairs" ? ["full", "mirror"] : ["full"];
 }
 
-/** Деталь у клітинці: «wood» — куб, «wood/tri» — дерев'яний трикутник. */
+/** Основний колір матеріалу: так фарбуються фігури, якщо фарбу не вибрано. */
+export const MATERIAL_COLORS: Record<(typeof MATERIALS)[number], string> = {
+  grass: "#5cb531",
+  wood: "#b9793a",
+  stone: "#a3a6b0",
+  sand: "#ecc86a",
+  ice: "#9fdcf5",
+  brick: "#b5482f",
+  gold: "#f5c518",
+  glass: "#cfeefc",
+  crystal: "#b85cf0",
+};
+
+/** Фарби для деталей з матеріалів. */
+export const PAINTS: { id: string; name: string; color: string }[] = [
+  { id: "red", name: "червоний", color: "#e53935" },
+  { id: "orange", name: "помаранчевий", color: "#fb8c00" },
+  { id: "yellow", name: "жовтий", color: "#fdd835" },
+  { id: "lime", name: "салатовий", color: "#8bc34a" },
+  { id: "green", name: "зелений", color: "#2e7d32" },
+  { id: "teal", name: "бірюзовий", color: "#26a69a" },
+  { id: "sky", name: "блакитний", color: "#4fc3f7" },
+  { id: "blue", name: "синій", color: "#1e5bd8" },
+  { id: "purple", name: "фіолетовий", color: "#8e24aa" },
+  { id: "pink", name: "рожевий", color: "#f06292" },
+  { id: "brown", name: "коричневий", color: "#795548" },
+  { id: "white", name: "білий", color: "#f5f5f5" },
+  { id: "gray", name: "сірий", color: "#9e9e9e" },
+  { id: "black", name: "чорний", color: "#2b2b2b" },
+];
+export const paintById = (id: string | undefined) => PAINTS.find((paint) => paint.id === id);
+
+/**
+ * Деталь у клітинці: «wood» — куб, «wood/tri» — дерев'яний трикутник,
+ * «wood/tri/blue» — синій трикутник (фарба — лише для матеріалів).
+ */
 export type Cell = string;
-export const makeCell = (block: BlockId, shape: Shape): Cell => (shape === "full" ? block : `${block}/${shape}`);
-export function parseCell(value: unknown): { block: BlockId; shape: Shape } | null {
+export function makeCell(block: BlockId, shape: Shape, paint?: string): Cell {
+  if (paint && isMaterial(block) && paintById(paint)) return `${block}/${shape}/${paint}`;
+  return shape === "full" ? block : `${block}/${shape}`;
+}
+export function parseCell(value: unknown): { block: BlockId; shape: Shape; paint?: string } | null {
   if (typeof value !== "string") return null;
-  const [block, shape = "full", extra] = value.split("/");
+  const [block, shape = "full", paint, extra] = value.split("/");
   if (extra !== undefined || !isBlock(block) || !shapesFor(block).includes(shape as Shape)) return null;
-  return { block, shape: shape as Shape };
+  if (paint === undefined) return { block, shape: shape as Shape };
+  if (!isMaterial(block) || !paintById(paint)) return null;
+  return { block, shape: shape as Shape, paint };
+}
+
+/** Суцільний колір деталі: фарба, а для фігур без фарби — основний колір матеріалу. Куб без фарби має текстуру. */
+export function solidColor(piece: { block: BlockId; shape: Shape; paint?: string }): string | null {
+  const paint = paintById(piece.paint);
+  if (paint) return paint.color;
+  if (piece.shape !== "full" && isMaterial(piece.block)) return MATERIAL_COLORS[piece.block as (typeof MATERIALS)[number]];
+  return null;
 }
 export const isCell = (value: unknown): value is Cell => parseCell(value) !== null;
 

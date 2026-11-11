@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { emptySave, parseSave } from "../../storage/save";
-import { emptyIsland, emptyPlot, isCell, makeCell, parseCell, starterInventory } from "../rewards/blocks";
+import { emptyIsland, emptyPlot, isCell, makeCell, parseCell, solidColor, starterInventory } from "../rewards/blocks";
 import { taskLoot } from "../rewards/rewards";
 import { placeBlock, removeBlock } from "./island";
 import { claimQuests, questProgress } from "./quests";
@@ -16,6 +16,23 @@ describe("форми деталей", () => {
     expect(isCell("wood/mirror")).toBe(false);
     expect(isCell("lava/tri")).toBe(false);
     expect(isCell("wood/tri/x")).toBe(false);
+  });
+
+  it("фігури — одного кольору, а матеріал можна пофарбувати", () => {
+    expect(makeCell("wood", "cone", "blue")).toBe("wood/cone/blue");
+    expect(parseCell("wood/full/red")).toEqual({ block: "wood", shape: "full", paint: "red" });
+    expect(makeCell("door", "full", "red")).toBe("door");
+    expect(isCell("door/full/red")).toBe(false);
+    expect(isCell("wood/tri/rainbow")).toBe(false);
+    expect(solidColor({ block: "grass", shape: "cone" })).toBe("#5cb531");
+    expect(solidColor({ block: "grass", shape: "full" })).toBeNull();
+    expect(solidColor({ block: "grass", shape: "full", paint: "blue" })).toBe("#1e5bd8");
+    // Перефарбувати поставлену деталь — безкоштовно.
+    let build = { inventory: { ...starterInventory(), wood: 1 }, island: emptyIsland() };
+    build = placeBlock(build, 0, "wood/tri");
+    build = placeBlock(build, 0, "wood/tri/pink");
+    expect(build).toMatchObject({ inventory: { wood: 0 } });
+    expect(build.island[0]).toBe("wood/tri/pink");
   });
 
   it("деталь коштує один блок, а зміна форми того самого матеріалу — безкоштовна", () => {

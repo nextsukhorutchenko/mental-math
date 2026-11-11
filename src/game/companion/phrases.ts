@@ -8,8 +8,8 @@ const PHRASES: Record<CompanionEvent, string[]> = {
   greet: [
     "Привіт! Я {name}. Ходімо добувати блоки?",
     "З поверненням! Який рівень сьогодні?",
-    "Я вже наточив кирку. Почнімо?",
-    "Радий тебе бачити! Острів чекає на нові блоки.",
+    "Я вже {наточив|наточила} кирку. Почнімо?",
+    "{Радий|Рада} тебе бачити! Острів чекає на нові блоки.",
   ],
   ask: ["Не поспішай, рахуй уважно.", "Я поруч. Рух за рухом!", "Спокійно, кісточка за кісточкою.", "У тебе вийде."],
   correct: ["Точно в ціль!", "Гарна робота!", "Ти дуже уважна!", "Так тримати!", "Кожен рух на місці!"],
@@ -33,10 +33,19 @@ const MOODS: Record<CompanionEvent, Mood> = {
 
 /**
  * Репліка для події. variant — будь-яке число (номер прикладу, день), щоб фрази чергувалися, але не блимали.
- * name — ім'я вибраного супутника.
+ * name — ім'я вибраного супутника; female — він говорить про себе в жіночому роді
+ * (у фразах це записано як {чоловічий|жіночий}).
  */
-export function phrase(event: CompanionEvent, variant: number, name = COMPANION_NAME): { text: string; mood: Mood } {
+export function phrase(
+  event: CompanionEvent,
+  variant: number,
+  name = COMPANION_NAME,
+  female = false,
+): { text: string; mood: Mood } {
   const list = PHRASES[event];
   const index = ((Math.trunc(variant) % list.length) + list.length) % list.length;
-  return { text: list[index]!.replace("{name}", name), mood: MOODS[event] };
+  const text = list[index]!
+    .replace("{name}", name)
+    .replace(/\{([^|}]+)\|([^}]+)\}/g, (_, male: string, fem: string) => (female ? fem : male));
+  return { text, mood: MOODS[event] };
 }

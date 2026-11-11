@@ -30,7 +30,8 @@ export function PetSprite({ id, mood = "calm", className = "" }: { id: string; m
 /** Супутник із реплікою. variant обирає фразу зі списку для події; дотик до тварини відкриває вибір. */
 export function Companion({ event, variant = 0 }: { event: CompanionEvent; variant?: number }) {
   const { pet, onPickPet } = useContext(PlayerContext);
-  const { text, mood } = phrase(event, variant, petById(pet).name);
+  const companion = petById(pet);
+  const { text, mood } = phrase(event, variant, companion.name, companion.female);
   return (
     <div className="companion">
       {onPickPet ? (

@@ -22,6 +22,10 @@ describe("репліки супутника", () => {
   it("представляється іменем вибраного супутника", () => {
     expect(phrase("greet", 0).text).toBe("Привіт! Я Рудик. Ходімо добувати блоки?");
     expect(phrase("greet", 0, "Рекс").text).toContain("Я Рекс.");
+    expect(phrase("greet", 2, "Рекс").text).toBe("Я вже наточив кирку. Почнімо?");
+    expect(phrase("greet", 2, "Яра", true).text).toBe("Я вже наточила кирку. Почнімо?");
+    expect(phrase("greet", 3, "Яра", true).text).toMatch(/^Рада тебе бачити!/);
+    expect(petById("dog")).toMatchObject({ name: "Яра", female: true });
   });
 
   it("кожен супутник — тварина з ім'ям, де кожна клітинка має колір", () => {

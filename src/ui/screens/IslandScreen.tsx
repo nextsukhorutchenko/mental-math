@@ -1,4 +1,4 @@
-import { type PointerEvent, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type PointerEvent, useEffect, useRef, useState } from "react";
 import {
   type World,
   addPlot,
@@ -17,13 +17,17 @@ import {
   ITEMS,
   MATERIALS,
   MAX_PLOTS,
+  PAINTS,
   PLOT_SIZE,
   type PlotKind,
   SHAPE_NAMES,
   type Shape,
+  isMaterial,
   makeCell,
+  paintById,
   parseCell,
   shapesFor,
+  solidColor,
 } from "../../game/rewards/blocks";
 import { CARD_ITEMS, MIN_TASK_EXAMPLES, TASK_REWARDS } from "../../game/rewards/rewards";
 import { FLASH_LOOT } from "../../game/flash/flash";
@@ -39,11 +43,16 @@ const KIND_INFO: Record<PlotKind, { icon: string; name: string; hint: string }> 
   detail: { icon: "🔍", name: "Детальна будова", hint: "дрібні клітинки для гарних деталей" },
 };
 
-/** Деталь у клітинці: матеріал і форма малюються в CSS. */
+/** Деталь у клітинці: форма з CSS; фігури й пофарбовані деталі — одного кольору, куб без фарби — з текстурою. */
 function Piece({ cell }: { cell: Cell }) {
   const piece = parseCell(cell);
   if (!piece) return null;
-  return <span className={`piece block block-${piece.block} shape-${piece.shape}`} />;
+  const color = solidColor(piece);
+  return color ? (
+    <span className={`piece solid shape-${piece.shape}`} style={{ "--solid": color } as CSSProperties} />
+  ) : (
+    <span className={`piece block block-${piece.block} shape-${piece.shape}`} />
+  );
 }
 
 interface Props {
@@ -56,6 +65,8 @@ interface Props {
 export function IslandScreen({ world, questsDone, onChange }: Props) {
   const [tool, setTool] = useState<Tool>("grass");
   const [shape, setShape] = useState<Shape>("full");
+  /** Фарба для деталей з матеріалів; undefined — колір самого матеріалу. */
+  const [color, setColor] = useState<string | undefined>(undefined);
   const [active, setActive] = useState(0);
   const [choosing, setChoosing] = useState(false);
   const current = Math.min(active, world.plots.length - 1);
@@ -86,7 +97,7 @@ export function IslandScreen({ world, questsDone, onChange }: Props) {
 
   const paint = (index: number) => {
     const next = editPlot(latest.current, current, (build) =>
-      tool === "pick" ? removeBlock(build, index) : placeBlock(build, index, makeCell(tool, activeShape)),
+      tool === "pick" ? removeBlock(build, index) : placeBlock(build, index, makeCell(tool, activeShape, color)),
     );
     if (next === latest.current) return;
     latest.current = next;
@@ -241,10 +252,39 @@ export function IslandScreen({ world, questsDone, onChange }: Props) {
               title={SHAPE_NAMES[option]}
             >
               <span className="shape-preview">
-                <Piece cell={makeCell(tool as BlockId, option)} />
+                <Piece cell={makeCell(tool as BlockId, option, color)} />
               </span>
               <small>{SHAPE_NAMES[option]}</small>
             </button>
+          ))}
+        </div>
+      )}
+
+      {tool !== "pick" && isMaterial(tool) && (
+        <div className="paints" role="radiogroup" aria-label="Колір">
+          <button
+            role="radio"
+            aria-checked={color === undefined}
+            className={`paint paint-own${color === undefined ? " paint-active" : ""}`}
+            onClick={() => setColor(undefined)}
+            title="Колір матеріалу"
+          >
+            <span className="shape-preview">
+              <Piece cell={makeCell(tool, "circle")} />
+            </span>
+            <small>як {BLOCK_NAMES[tool]}</small>
+          </button>
+          {PAINTS.map((option) => (
+            <button
+              key={option.id}
+              role="radio"
+              aria-checked={color === option.id}
+              aria-label={option.name}
+              title={option.name}
+              className={`paint${color === option.id ? " paint-active" : ""}`}
+              style={{ "--solid": option.color } as CSSProperties}
+              onClick={() => setColor(option.id)}
+            />
           ))}
         </div>
       )}
@@ -268,7 +308,9 @@ export function IslandScreen({ world, questsDone, onChange }: Props) {
               onClick={(event) => event.detail === 0 && paint(index)}
               aria-label={
                 piece
-                  ? `${BLOCK_NAMES[piece.block]}${piece.shape === "full" ? "" : `, ${SHAPE_NAMES[piece.shape]}`}`
+                  ? `${BLOCK_NAMES[piece.block]}${piece.shape === "full" ? "" : `, ${SHAPE_NAMES[piece.shape]}`}${
+                      piece.paint ? `, ${paintById(piece.paint)!.name}` : ""
+                    }`
                   : plot.kind === "island"
                     ? "вода"
                     : "повітря"

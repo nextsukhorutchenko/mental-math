@@ -9,6 +9,8 @@ export interface Pet {
   species: string;
   /** Як його звати в репліках. */
   name: string;
+  /** Говорить про себе в жіночому роді («наточила», «рада»). */
+  female?: boolean;
   rows: string[];
   colors: Record<string, string>;
 }
@@ -64,8 +66,9 @@ export const PETS: Pet[] = [
   },
   {
     id: "dog",
-    species: "Чорний пес",
-    name: "Вуглик",
+    species: "Чорна собака",
+    name: "Яра",
+    female: true,
     rows: [
       "...................K..K.....",
       "...................KK.KK....",

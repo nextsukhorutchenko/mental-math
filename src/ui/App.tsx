@@ -13,7 +13,17 @@ import type { Session } from "../game/session/session";
 import { type LessonSetup, mentalTryout, toDrillConfig } from "../game/session/setup";
 import { browserStore, loadSave, writeSave } from "../storage/localStore";
 import { DEFAULT_CHILD_NAME, type SaveData } from "../storage/save";
+import {
+  HOLIDAYS,
+  type HolidayId,
+  activeHoliday,
+  availableHolidays,
+  chooseHoliday,
+  greeting,
+  seasonOf,
+} from "../game/seasons/seasons";
 import { PlayerBadge, PlayerContext } from "./components/Avatar";
+import { Backdrop } from "./components/Backdrop";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
 import { FlashScreen } from "./screens/FlashScreen";
@@ -72,6 +82,20 @@ export function App() {
   useEffect(() => {
     setSoundEnabled(save.sound);
   }, [save.sound]);
+
+  // Фон: пора року — сама за місяцем; святковий — коли його ввімкнули.
+  const today = new Date();
+  const season = seasonOf(today);
+  const holiday = activeHoliday(save.backdrop, today);
+  const holidays = availableHolidays(today);
+  useEffect(() => {
+    document.documentElement.dataset.scene = holiday ?? season;
+  }, [holiday, season]);
+  const setBackdrop = (id: HolidayId | null) =>
+    setSave((current) => ({ ...current, backdrop: id ? chooseHoliday(id, new Date()) : null }));
+  // Кнопка у верхній панелі по черзі перемикає доступні зараз свята й звичайний фон.
+  const holidayOrder: (HolidayId | null)[] = [null, ...holidays];
+  const nextHoliday = holidayOrder[(holidayOrder.indexOf(holiday) + 1) % holidayOrder.length] ?? null;
 
   // Нова версія застосунку чекає, доки її не приймуть: посеред заняття нічого не перезавантажується.
   const [applyUpdate, setApplyUpdate] = useState<(() => void) | null>(null);
@@ -213,7 +237,13 @@ export function App() {
 
   return (
     <PlayerContext.Provider value={save.childName.trim() || DEFAULT_CHILD_NAME}>
+    <Backdrop season={season} holiday={holiday} />
     <div className="app">
+      {holiday && !inLesson && (
+        <p className="holiday-ribbon">
+          {HOLIDAYS[holiday].icon} {greeting(holiday, today)} {HOLIDAYS[holiday].icon}
+        </p>
+      )}
       <header className="topbar">
         <div className="logo" aria-hidden="true">
           <i />
@@ -224,6 +254,17 @@ export function App() {
         <h1>Ментальна математика</h1>
         <div className="topbar-actions">
           <PlayerBadge />
+          {(holidays.length > 0 || holiday) && (
+            <button
+              className={`btn btn-quiet${holiday ? " btn-festive" : ""}`}
+              aria-pressed={holiday !== null}
+              aria-label={nextHoliday ? `Святковий фон: ${HOLIDAYS[nextHoliday].title}` : "Звичайний фон"}
+              title={nextHoliday ? `Святковий фон: ${HOLIDAYS[nextHoliday].title}` : "Повернути звичайний фон"}
+              onClick={() => setBackdrop(nextHoliday)}
+            >
+              {holiday ? HOLIDAYS[holiday].icon : `${HOLIDAYS[holidays[0]!].icon} Свято`}
+            </button>
+          )}
           <button
             className="btn btn-quiet"
             aria-pressed={save.sound}
@@ -364,6 +405,9 @@ export function App() {
             ranks={ranks}
             onCertificate={openCertificate}
             onChildName={(childName) => setSave((current) => ({ ...current, childName }))}
+            season={season}
+            holiday={holiday}
+            onBackdrop={setBackdrop}
             onPlacement={() => setScreen("placement")}
             onResetPlacement={() => setSave((current) => ({ ...current, placement: null }))}
           />

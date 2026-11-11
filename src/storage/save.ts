@@ -18,6 +18,7 @@ import {
   starterInventory,
 } from "../game/rewards/blocks";
 import type { CardRecord } from "../game/cards/types";
+import { type BackdropChoice, HOLIDAY_IDS, type HolidayId } from "../game/seasons/seasons";
 import { LEVEL_IDS, TRACK_IDS } from "../game/curriculum/levels";
 import {
   DEFAULT_SETUP,
@@ -110,6 +111,8 @@ export interface SaveData {
   flashBest: number;
   /** Коли здобуто розряд за світ: id світу → дата (ISO). */
   rankDates: Record<string, string>;
+  /** Увімкнений святковий фон; null — фон за порою року. */
+  backdrop: BackdropChoice | null;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -142,6 +145,7 @@ export function emptySave(): SaveData {
     introSeen: false,
     flashBest: 0,
     rankDates: {},
+    backdrop: null,
   };
 }
 
@@ -351,6 +355,10 @@ export function parseSave(value: unknown): SaveData | null {
           Object.entries(value.rankDates).filter((entry): entry is [string, string] => isDate(entry[1])).slice(0, 20),
         )
       : {},
+    backdrop:
+      isObj(value.backdrop) && HOLIDAY_IDS.includes(value.backdrop.holiday as HolidayId) && isDay(value.backdrop.until)
+        ? { holiday: value.backdrop.holiday as HolidayId, until: value.backdrop.until }
+        : null,
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

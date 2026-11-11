@@ -2,6 +2,14 @@ import { trackTitle } from "../../game/curriculum/levels";
 import type { Rank } from "../../game/curriculum/curriculum";
 import type { Mastery } from "../../game/progress/progress";
 import { skillRows, weakSpots, weekStats } from "../../game/progress/stats";
+import {
+  HOLIDAYS,
+  HOLIDAY_IDS,
+  type HolidayId,
+  SEASON_TITLES,
+  type Season,
+  availableHolidays,
+} from "../../game/seasons/seasons";
 import type { SaveData } from "../../storage/save";
 import { BackupPanel } from "./BackupPanel";
 
@@ -24,6 +32,38 @@ interface Props {
   ranks: Rank[];
   onCertificate: (world: string) => void;
   onChildName: (name: string) => void;
+  season: Season;
+  holiday: HolidayId | null;
+  onBackdrop: (holiday: HolidayId | null) => void;
+}
+
+function BackdropPanel({ season, holiday, onBackdrop }: Pick<Props, "season" | "holiday" | "onBackdrop">) {
+  const now = new Date();
+  const available = availableHolidays(now);
+  return (
+    <section className="panel">
+      <h2>Фон застосунку</h2>
+      <p className="note">
+        Пора року змінюється сама: зараз {SEASON_TITLES[season]}. Святковий фон можна ввімкнути тут або кнопкою
+        вгорі, коли свято близько.
+      </p>
+      <div className="choice">
+        <button className={`chip${holiday === null ? " chip-active" : ""}`} onClick={() => onBackdrop(null)}>
+          🍂 За порою року
+        </button>
+        {HOLIDAY_IDS.map((id) => (
+          <button key={id} className={`chip${holiday === id ? " chip-active" : ""}`} onClick={() => onBackdrop(id)}>
+            {HOLIDAYS[id].icon} {HOLIDAYS[id].title}
+          </button>
+        ))}
+      </div>
+      {holiday && !available.includes(holiday) && (
+        <p className="note">
+          До цього свята ще далеко, тому фон увімкнено лише для перегляду — до кінця завтрашнього дня.
+        </p>
+      )}
+    </section>
+  );
 }
 
 export function ParentsScreen(props: Props) {
@@ -182,6 +222,8 @@ export function ParentsScreen(props: Props) {
           )}
         </div>
       </section>
+
+      <BackdropPanel season={props.season} holiday={props.holiday} onBackdrop={props.onBackdrop} />
 
       <BackupPanel save={save} onReplace={onReplace} onExported={onExported} />
     </>

@@ -28,12 +28,214 @@ body {
   margin: 0;
   min-height: 100vh;
   background:
-    linear-gradient(to bottom, transparent calc(100% - 72px), var(--grass) calc(100% - 72px), var(--grass) calc(100% - 56px), var(--dirt) calc(100% - 56px)),
-    linear-gradient(to bottom, var(--sky-deep), var(--sky) 60%);
+    linear-gradient(to bottom, transparent calc(100% - 72px), var(--bg-ground) calc(100% - 72px), var(--bg-ground) calc(100% - 56px), var(--bg-soil) calc(100% - 56px)),
+    linear-gradient(to bottom, var(--bg-sky-top), var(--bg-sky-bottom) 60%);
   background-attachment: fixed;
 }
 
+/* Фон за порою року чи святом: змінюються лише небо й земля під деревами. */
+:root {
+  --bg-sky-top: var(--sky-deep);
+  --bg-sky-bottom: var(--sky);
+  --bg-ground: var(--grass);
+  --bg-soil: var(--dirt);
+}
+
+:root[data-scene="autumn"] {
+  --bg-sky-top: #79b4e3;
+  --bg-sky-bottom: #f6dca6;
+  --bg-ground: #c99a2e;
+}
+
+:root[data-scene="winter"] {
+  --bg-sky-top: #a9c9e6;
+  --bg-sky-bottom: #eef6fb;
+  --bg-ground: #ffffff;
+  --bg-soil: #c9dceb;
+}
+
+:root[data-scene="nicholas"],
+:root[data-scene="christmas"],
+:root[data-scene="newyear"] {
+  --bg-sky-top: #0f1d42;
+  --bg-sky-bottom: #3b5c9e;
+  --bg-ground: #ffffff;
+  --bg-soil: #c9dceb;
+}
+
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.scene {
+  position: absolute;
+  bottom: 68px;
+  height: min(52vh, 420px);
+  width: auto;
+}
+
+.scene-left {
+  left: max(8px, calc(50% - 440px - 230px));
+}
+
+.scene-right {
+  right: max(8px, calc(50% - 440px - 230px));
+}
+
+.scene-small {
+  height: min(38vh, 300px);
+}
+
+.scene-figure {
+  height: min(34vh, 260px);
+}
+
+.gifts {
+  position: absolute;
+  bottom: 64px;
+  right: max(8px, calc(50% - 440px - 120px));
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+/* На Різдво подарунки лежать під ялинкою. */
+.gifts-christmas {
+  right: auto;
+  left: calc(max(8px, calc(50% - 440px - 230px)) + min(14vh, 110px));
+}
+
+.gifts svg {
+  width: 34px;
+}
+
+.gifts svg:nth-child(2) {
+  width: 26px;
+}
+
+.light {
+  animation: twinkle 1.6s steps(2, jump-none) infinite;
+}
+
+@keyframes twinkle {
+  to {
+    opacity: 0.35;
+  }
+}
+
+.stars i {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #fff8e1;
+  animation: twinkle 2.4s steps(2, jump-none) infinite;
+}
+
+.fall-item {
+  position: absolute;
+  top: -40px;
+  animation: fall linear infinite;
+}
+
+.fall-item svg {
+  display: block;
+  height: auto;
+}
+
+.fall-spin {
+  animation: sway 3s ease-in-out infinite alternate;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(calc(100vh + 60px));
+  }
+}
+
+@keyframes sway {
+  from {
+    transform: translateX(calc(var(--sway, 20px) * -1)) rotate(-25deg);
+  }
+  to {
+    transform: translateX(var(--sway, 20px)) rotate(25deg);
+  }
+}
+
+.burst {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+.burst i {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  transform: rotate(var(--a)) translateX(0);
+  opacity: 0;
+  animation: burst 3.2s ease-out infinite;
+}
+
+@keyframes burst {
+  0% {
+    transform: rotate(var(--a)) translateX(0);
+    opacity: 1;
+  }
+  45% {
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: rotate(var(--a)) translateX(70px);
+    opacity: 0;
+  }
+}
+
+.holiday-ribbon {
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  text-align: center;
+  font-size: clamp(16px, 4.6vw, 22px);
+  font-weight: 800;
+  color: #fff8e1;
+  background: #c8302a;
+  border: var(--block) solid var(--stone-edge);
+  box-shadow: 0 6px 0 var(--stone-edge);
+  text-shadow: 2px 2px 0 rgba(43, 33, 24, 0.5);
+}
+
+/* Без анімацій листя й сніжинки застигають у повітрі, а салют — на піку спалаху. */
+@media (prefers-reduced-motion: reduce) {
+  .fall-item {
+    top: var(--rest);
+    animation: none;
+  }
+
+  .fall-spin {
+    animation: none;
+    transform: rotate(-20deg);
+  }
+
+  .burst i {
+    animation: none;
+    opacity: 1;
+    transform: rotate(var(--a)) translateX(45px);
+  }
+
+  .light,
+  .stars i {
+    animation: none;
+  }
+}
+
 .app {
+  position: relative;
+  z-index: 1;
   max-width: 880px;
   margin: 0 auto;
   padding: 16px 16px 96px;
@@ -1206,6 +1408,10 @@ main > .panel + .panel {
   color: var(--ink);
   text-shadow: none;
   box-shadow: 0 5px 0 #cfc6b3, 0 5px 0 4px var(--stone-edge);
+}
+
+.btn-festive {
+  background: var(--gold);
 }
 
 .btn:active:not(:disabled),

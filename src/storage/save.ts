@@ -4,12 +4,15 @@ import type { ExampleResult } from "../game/session/session";
 import {
   BLOCKS,
   type Bonus,
-  ISLAND_COLS,
-  ISLAND_ROWS,
   type Inventory,
   type Island,
   type Loot,
-  emptyIsland,
+  MAX_PLOTS,
+  PLOT_KINDS,
+  PLOT_SIZE,
+  type Plot,
+  type PlotKind,
+  emptyPlot,
   isBlock,
   isBonus,
   starterInventory,
@@ -89,8 +92,8 @@ export interface SaveData {
   unlockAll: boolean;
   /** Здобуті блоки, ще не поставлені на острів. */
   inventory: Inventory;
-  /** Клітинки острова рядок за рядком. */
-  island: Island;
+  /** Ділянки для будівництва; клітинки кожної — рядок за рядком. Перша — старий острів. */
+  plots: Plot[];
   /** Тижні (понеділок, РРРР-ММ-ДД), за які вже видано нагороду за тижневу ціль. */
   weekGoalsPaid: string[];
   /** Чи ввімкнено звуки. */
@@ -130,7 +133,7 @@ export function emptySave(): SaveData {
     lastExportAt: null,
     unlockAll: false,
     inventory: starterInventory(),
-    island: emptyIsland(),
+    plots: [emptyPlot("island")],
     weekGoalsPaid: [],
     sound: true,
     cardLog: [],
@@ -234,9 +237,22 @@ function parseInventory(value: unknown): Inventory {
   return { ...starterInventory(), grass: 0, ...parseLoot(value) };
 }
 
-function parseIsland(value: unknown): Island {
-  if (!Array.isArray(value) || value.length !== ISLAND_COLS * ISLAND_ROWS) return emptyIsland();
+function parseCells(value: unknown, kind: PlotKind): Island {
+  const { cols, rows } = PLOT_SIZE[kind];
+  if (!Array.isArray(value) || value.length !== cols * rows) return emptyPlot(kind).cells;
   return value.map((cell) => (isBlock(cell) ? cell : null));
+}
+
+/** Ділянки; старе збереження з одним полем island стає першою ділянкою-островом. */
+function parsePlots(value: Record<string, unknown>): Plot[] {
+  if (Array.isArray(value.plots)) {
+    const plots = value.plots
+      .filter((plot): plot is { kind: PlotKind; cells: unknown } => isObj(plot) && PLOT_KINDS.includes(plot.kind as PlotKind))
+      .slice(0, MAX_PLOTS)
+      .map((plot) => ({ kind: plot.kind, cells: parseCells(plot.cells, plot.kind) }));
+    if (plots.length > 0) return plots;
+  }
+  return [{ kind: "island", cells: parseCells(value.island, "island") }];
 }
 
 function parseRecord(value: unknown): SessionRecord | null {
@@ -318,7 +334,7 @@ export function parseSave(value: unknown): SaveData | null {
     lastExportAt: isDate(value.lastExportAt) ? value.lastExportAt : null,
     unlockAll: value.unlockAll === true,
     inventory: parseInventory(value.inventory),
-    island: parseIsland(value.island),
+    plots: parsePlots(value),
     weekGoalsPaid: Array.isArray(value.weekGoalsPaid)
       ? value.weekGoalsPaid.filter((week): week is string => typeof week === "string").slice(-DAYS_LIMIT)
       : [],

@@ -38,6 +38,26 @@ export const starterInventory = (): Inventory => ({
 });
 export const emptyIsland = (): Island => Array<BlockId | null>(ISLAND_COLS * ISLAND_ROWS).fill(null);
 
+/**
+ * Ділянка для будівництва. «island» — острів згори, «house» — будова збоку (небо й земля),
+ * де зручно ставити хатинки й вежі.
+ */
+export type PlotKind = "island" | "house";
+export const PLOT_KINDS: PlotKind[] = ["island", "house"];
+export const PLOT_SIZE: Record<PlotKind, { cols: number; rows: number }> = {
+  island: { cols: ISLAND_COLS, rows: ISLAND_ROWS },
+  house: { cols: 12, rows: 12 },
+};
+export interface Plot {
+  kind: PlotKind;
+  cells: Island;
+}
+export const MAX_PLOTS = 8;
+export const emptyPlot = (kind: PlotKind): Plot => ({
+  kind,
+  cells: Array<BlockId | null>(PLOT_SIZE[kind].cols * PLOT_SIZE[kind].rows).fill(null),
+});
+
 /** Особливі нагороди, які показуємо окремим рядком у підсумку. */
 export type Bonus = "accuracy" | "mastery" | "mental" | "week";
 export const isBonus = (value: unknown): value is Bonus =>

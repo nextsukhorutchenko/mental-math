@@ -352,8 +352,8 @@ export function App() {
           />
         ) : tab === "island" ? (
           <IslandScreen
-            build={{ inventory: save.inventory, island: save.island }}
-            onChange={(build) => setSave((current) => ({ ...current, ...build }))}
+            world={{ inventory: save.inventory, plots: save.plots }}
+            onChange={(world) => setSave((current) => ({ ...current, ...world }))}
           />
         ) : tab === "parents" ? (
           <ParentsScreen

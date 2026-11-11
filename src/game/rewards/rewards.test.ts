@@ -1,11 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { generateDrill } from "../../core/generator/generator";
 import { type SaveData, emptySave, parseSave } from "../../storage/save";
-import { placeBlock, placedCount, removeBlock } from "../island/island";
+import {
+  type World,
+  addPlot,
+  demolishPlot,
+  editPlot,
+  placeBlock,
+  placedCount,
+  removeBlock,
+} from "../island/island";
 import { creditSession, recordUse } from "../progress/progress";
 import { type Session, markHint, nextExample, startSession, submitAnswer } from "../session/session";
 import { DEFAULT_SETUP, toDrillConfig } from "../session/setup";
-import { ISLAND_COLS, ISLAND_ROWS, emptyIsland, starterInventory } from "./blocks";
+import {
+  ISLAND_COLS,
+  ISLAND_ROWS,
+  MAX_PLOTS,
+  PLOT_SIZE,
+  emptyIsland,
+  emptyPlot,
+  starterInventory,
+} from "./blocks";
 import { sessionLoot, weekActiveDays, weekId, worldBlock } from "./rewards";
 
 const drill = generateDrill({ ...toDrillConfig({ ...DEFAULT_SETUP, exampleCount: 5, actionsPerExample: 3 }), seed: 4 });
@@ -142,24 +158,66 @@ describe("острів", () => {
   });
 });
 
+describe("ділянки", () => {
+  const world = (): World => ({ inventory: { ...starterInventory() }, plots: [emptyPlot("island")] });
+
+  it("додає ділянки до межі", () => {
+    let w = addPlot(world(), "house");
+    expect(w.plots.map((plot) => plot.kind)).toEqual(["island", "house"]);
+    expect(w.plots[1]!.cells).toHaveLength(PLOT_SIZE.house.cols * PLOT_SIZE.house.rows);
+    for (let i = 0; i < 20; i++) w = addPlot(w, "island");
+    expect(w.plots).toHaveLength(MAX_PLOTS);
+  });
+
+  it("будує на вибраній ділянці, а розібрана ділянка повертає блоки", () => {
+    let w = addPlot(world(), "house");
+    w = editPlot(w, 1, (build) => placeBlock(build, 0, "grass"));
+    w = editPlot(w, 1, (build) => placeBlock(build, 1, "grass"));
+    expect(w.plots[1]!.cells.slice(0, 2)).toEqual(["grass", "grass"]);
+    expect(w.plots[0]!.cells.every((cell) => cell === null)).toBe(true);
+    expect(w.inventory.grass).toBe(10);
+    const unchanged = editPlot(w, 1, (build) => placeBlock(build, 0, "ice"));
+    expect(unchanged).toBe(w);
+    w = demolishPlot(w, 1);
+    expect(w.plots).toHaveLength(1);
+    expect(w.inventory.grass).toBe(12);
+    expect(demolishPlot(w, 0)).toBe(w);
+  });
+});
+
 describe("збереження блоків", () => {
   it("старе збереження без блоків отримує стартовий набір і порожній острів", () => {
-    const { inventory, island, weekGoalsPaid, ...old } = emptySave();
-    void [inventory, island, weekGoalsPaid];
+    const { inventory, plots, weekGoalsPaid, ...old } = emptySave();
+    void [inventory, plots, weekGoalsPaid];
     const parsed = parseSave(old)!;
     expect(parsed.inventory).toEqual(starterInventory());
-    expect(parsed.island).toEqual(emptyIsland());
+    expect(parsed.plots).toEqual([emptyPlot("island")]);
     expect(parsed.weekGoalsPaid).toEqual([]);
   });
 
-  it("зіпсований острів і невідомі блоки відкидаються", () => {
+  it("старий острів стає першою ділянкою", () => {
+    const { plots, ...rest } = emptySave();
+    void plots;
+    const island = emptyIsland();
+    island[7] = "brick";
+    const parsed = parseSave({ ...rest, island })!;
+    expect(parsed.plots).toEqual([{ kind: "island", cells: island }]);
+  });
+
+  it("зіпсовані ділянки й невідомі блоки відкидаються", () => {
     const island = emptyIsland();
     island[3] = "stone";
-    const dirty = { ...emptySave(), island: [...island.slice(0, 4), "lava", ...island.slice(5)], inventory: { grass: 2, lava: 9, stone: -1 } };
+    const cells = [...island.slice(0, 4), "lava", ...island.slice(5)];
+    const dirty = {
+      ...emptySave(),
+      plots: [{ kind: "island", cells }, { kind: "castle", cells }, { kind: "house", cells: ["grass"] }],
+      inventory: { grass: 2, lava: 9, stone: -1 },
+    };
     const parsed = parseSave(JSON.parse(JSON.stringify(dirty)))!;
-    expect(parsed.island[3]).toBe("stone");
-    expect(parsed.island[4]).toBeNull();
+    expect(parsed.plots.map((plot) => plot.kind)).toEqual(["island", "house"]);
+    expect(parsed.plots[0]!.cells[3]).toBe("stone");
+    expect(parsed.plots[0]!.cells[4]).toBeNull();
+    expect(parsed.plots[1]).toEqual(emptyPlot("house"));
     expect(parsed.inventory).toEqual({ ...starterInventory(), grass: 2 });
-    expect(parseSave({ ...emptySave(), island: ["grass"] })!.island).toEqual(emptyIsland());
   });
 });

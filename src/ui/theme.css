@@ -531,6 +531,28 @@ main > .panel + .panel {
   background: linear-gradient(135deg, #d8f3ff 0 30%, #9fdcf5 30% 55%, #c9eefc 55% 70%, #86cdea 70%);
 }
 
+/* Цегла: ряди зі зсувом, світлі шви. */
+.block-brick {
+  background:
+    linear-gradient(#e8d2b8, #e8d2b8) 0 48% / 100% 8% no-repeat,
+    linear-gradient(#e8d2b8, #e8d2b8) 0 100% / 100% 8% no-repeat,
+    linear-gradient(#e8d2b8, #e8d2b8) 48% 0 / 8% 48% no-repeat,
+    linear-gradient(#e8d2b8, #e8d2b8) 20% 100% / 8% 50% no-repeat,
+    linear-gradient(#e8d2b8, #e8d2b8) 80% 100% / 8% 50% no-repeat,
+    #b5482f;
+}
+
+.block-gold {
+  background: linear-gradient(135deg, #fff3a6 0 22%, #f5c518 22% 55%, #ffe066 55% 70%, #c99a06 70%);
+}
+
+/* Скло: майже прозоре, з відблиском — крізь нього видно фон. */
+.block-glass {
+  background:
+    linear-gradient(135deg, transparent 0 30%, rgba(255, 255, 255, 0.85) 30% 38%, transparent 38% 52%, rgba(255, 255, 255, 0.6) 52% 57%, transparent 57%),
+    rgba(214, 240, 251, 0.45);
+}
+
 .block-crystal {
   background: linear-gradient(135deg, #f3b6ff 0 25%, #b85cf0 25% 50%, #e59bff 50% 65%, #8a35c9 65%);
 }
@@ -608,6 +630,26 @@ main > .panel + .panel {
   padding: 10px;
   border: var(--block) solid var(--stone-edge);
   background: repeating-linear-gradient(135deg, #4aa8e0 0 14px, #5db4e8 14px 28px);
+  /* Ведення пальцем малює блоки, а не прокручує сторінку. */
+  touch-action: none;
+  user-select: none;
+}
+
+/* Будова збоку: небо згори, під нею земля. */
+.island-house {
+  background: linear-gradient(#9fd8f5, #d6f0fb);
+  border-bottom: 14px solid #7a5230;
+  box-shadow: inset 0 -6px 0 #5cb531;
+}
+
+.island-house .cell:not(.block) {
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.plot-kinds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .cell {

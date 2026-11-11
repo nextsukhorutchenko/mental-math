@@ -1,12 +1,24 @@
 import { type SkillFamily, type SkillId, skillFamily } from "../../core/rules/skills";
+import { type WorldId, levelById } from "../curriculum/levels";
 import { type Session, isClean } from "../session/session";
 import { type BlockId, type Inventory, type Loot } from "./blocks";
 
 /** Кожен світ дає свій матеріал. */
-const WORLD_BLOCK: Record<SkillFamily, BlockId> = { simple: "wood", five: "stone", ten: "sand", mix: "ice" };
+const FAMILY_BLOCK: Record<SkillFamily, BlockId> = { simple: "wood", five: "stone", ten: "sand", mix: "ice" };
+const WORLD_BLOCK: Record<WorldId, BlockId> = {
+  forest: "wood",
+  caves: "stone",
+  desert: "sand",
+  snow: "ice",
+  mine: "brick",
+  volcano: "gold",
+  sky: "glass",
+};
 
-export function worldBlock(topic: SkillId): BlockId {
-  return WORLD_BLOCK[skillFamily(topic)];
+/** Матеріал за заняття: за світом рівня, а для вільного тренажера — за родиною прийому. */
+export function worldBlock(topic: SkillId, level?: string): BlockId {
+  const world = level ? levelById(level)?.world : undefined;
+  return world ? WORLD_BLOCK[world] : FAMILY_BLOCK[skillFamily(topic)];
 }
 
 /** Скільки днів із заняттями на тиждень — гнучка ціль; пропущений день нічого не забирає. */
@@ -46,9 +58,14 @@ export function withLoot(inventory: Inventory, loot: Loot): Inventory {
  * Здобич за приклади заняття. Швидкість не враховується зовсім:
  * нагороджуємо розв'язання, самостійність, виправлену помилку й уважний розбір.
  */
-export function sessionLoot(session: Session, topic: SkillId, partial: boolean): { loot: Loot; accurate: boolean } {
+export function sessionLoot(
+  session: Session,
+  topic: SkillId,
+  partial: boolean,
+  level?: string,
+): { loot: Loot; accurate: boolean } {
   const loot: Loot = {};
-  const block = worldBlock(topic);
+  const block = worldBlock(topic, level);
   let clean = 0;
   for (const result of session.results) {
     if (!result.solved) {

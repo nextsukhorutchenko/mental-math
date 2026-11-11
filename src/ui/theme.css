@@ -701,6 +701,193 @@ main > .panel + .panel {
   font-size: clamp(48px, 12vw, 80px);
 }
 
+/* Множення й ділення одним рядком */
+.example-prompt {
+  text-align: center;
+  white-space: nowrap;
+  font-size: clamp(30px, 7vw, 44px);
+}
+
+.abacus-dot {
+  fill: #fff6e8;
+}
+
+.demo-finger {
+  margin: 0;
+  font-weight: 800;
+  color: var(--grass-dark);
+}
+
+/* Вступний урок */
+.lesson-row {
+  display: grid;
+  grid-template-columns: minmax(140px, 240px) 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 560px) {
+  .lesson-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lesson-list {
+  margin: 0;
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+/* Розряди й грамота */
+.rank-strip {
+  justify-content: space-between;
+}
+
+.world-count {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.world-cert {
+  padding: 4px 10px;
+  font-size: 15px;
+  text-shadow: none;
+}
+
+.text-input {
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 12px;
+  border: var(--block) solid var(--stone-edge);
+  background: #fff;
+  color: var(--ink);
+  max-width: 360px;
+}
+
+.certificate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: clamp(20px, 5vw, 48px);
+  text-align: center;
+  background: #fffaf0;
+  border: 10px double var(--gold-dark);
+  outline: var(--block) solid var(--stone-edge);
+}
+
+.certificate h2 {
+  font-size: clamp(36px, 8vw, 56px);
+  color: var(--gold-dark);
+  letter-spacing: 2px;
+}
+
+.certificate-top {
+  margin: 0;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--ink-soft);
+}
+
+.certificate-name {
+  margin: 8px 0 0;
+  font-size: clamp(26px, 6vw, 40px);
+  font-weight: 900;
+  border-bottom: 3px solid var(--stone-edge);
+  padding: 0 24px 4px;
+}
+
+.certificate-text {
+  margin: 0;
+  font-size: 18px;
+  max-width: 520px;
+}
+
+.certificate-rank {
+  margin: 0;
+  font-size: clamp(22px, 5vw, 30px);
+  font-weight: 900;
+  color: var(--grass-dark);
+}
+
+.certificate-date {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+  .topbar,
+  .tabs,
+  .banner,
+  .no-print {
+    display: none !important;
+  }
+  .panel.certificate-wrap {
+    border: none;
+    box-shadow: none;
+    background: #fff;
+    padding: 0;
+  }
+}
+
+/* Диктант */
+.dictation {
+  margin: 0;
+  padding-left: 32px;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.5;
+  text-align: left;
+}
+
+/* Флеш-виклик */
+.flash-levels {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.flash-level {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: #fff;
+  border: var(--block) solid var(--stone-edge);
+  cursor: pointer;
+  text-align: left;
+}
+
+.flash-level b {
+  font-size: 24px;
+}
+
+.flash-level:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.flash-done {
+  background: #dff5cf;
+}
+
+.flash-number {
+  animation: none;
+  min-height: 1.2em;
+}
+
 /* Картка рівня знизу екрана */
 .sheet {
   position: fixed;
@@ -1018,6 +1205,23 @@ select {
   margin-top: 8px;
   height: 6px;
   background: var(--wood-dark);
+}
+
+.clue {
+  margin: 0;
+  padding: 8px 12px;
+  background: #fff8dc;
+  border: 3px solid var(--gold-dark);
+  font-weight: 700;
+  font-size: 17px;
+}
+
+.review-clue {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.3;
+  margin-bottom: 4px;
 }
 
 .work-single {

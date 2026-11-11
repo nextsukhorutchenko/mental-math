@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
-import { type SkillId, describeSkill, explainSkill } from "../../core/rules/skills";
+import type { SkillId } from "../../core/rules/skills";
 import {
   type LevelState,
+  type Rank,
   WORLDS,
   currentLevel,
+  hasActions,
   levelLabel,
   levelStates,
   recommendLesson,
@@ -42,12 +44,12 @@ function LevelCard({ state, onStart, onCustomize, onClose }: CardProps) {
   return (
     <div className="sheet" role="dialog" aria-label="Рівень">
       <div className="sheet-head">
-        <h2>{state.skill === "simple" ? "Прямі рухи" : describeSkill(state.skill)}</h2>
+        <h2>{state.level.title}</h2>
         <button className="btn btn-quiet" onClick={onClose} aria-label="Закрити">
           ✕
         </button>
       </div>
-      <p className="lead">{explainSkill(state.skill)}</p>
+      <p className="lead">{state.level.explain}</p>
       {locked ? (
         <p className="note">🔒 Рівень відкриється, коли попередній буде засвоєно на абакусі.</p>
       ) : (
@@ -56,17 +58,21 @@ function LevelCard({ state, onStart, onCustomize, onClose }: CardProps) {
           <p className="note">{masteryLine("🧠 Подумки", state.mental)}</p>
           <div className="row">
             <button className="btn btn-big" onClick={() => onStart(next.setup)}>
-              {next.title}: {next.setup.exampleCount} прикладів по {next.setup.actionsPerExample}{" "}
-              {next.setup.actionsPerExample <= 4 ? "дії" : "дій"} ▶
+              {next.title}: {next.setup.exampleCount} прикладів
+              {hasActions(state.level) &&
+                ` по ${next.setup.actionsPerExample} ${next.setup.actionsPerExample <= 4 ? "дії" : "дій"}`}{" "}
+              ▶
             </button>
             {state.physical.status !== "new" && next.stage !== "mental" && (
               <button className="btn" onClick={() => onStart(mentalTryout(next.setup))}>
                 🧠 5 коротких подумки
               </button>
             )}
-            <button className="btn btn-quiet" onClick={() => onCustomize(state.skill)}>
-              Налаштувати самому
-            </button>
+            {state.level.skill && (
+              <button className="btn btn-quiet" onClick={() => onCustomize(state.level.skill!)}>
+                Налаштувати самому
+              </button>
+            )}
           </div>
         </>
       )}
@@ -77,6 +83,16 @@ function LevelCard({ state, onStart, onCustomize, onClose }: CardProps) {
 interface Props {
   skills: SaveData["skills"];
   unlockAll: boolean;
+  /** Рівень зі стартової перевірки. */
+  placement: string | null;
+  /** Чи пройдено вступний урок про соробан. */
+  introSeen: boolean;
+  onLesson: () => void;
+  /** Здобуті розряди (повністю пройдені світи). */
+  ranks: Rank[];
+  onCertificate: (world: string) => void;
+  /** Пропозиція пройти стартову перевірку (для тих, хто ще не займався). */
+  onPlacement: (() => void) | null;
   /** Скільки днів цього тижня вже були заняття. */
   weekDays: number;
   /** План «Заняття на сьогодні». */
@@ -136,20 +152,52 @@ function Campfire({ days }: { days: number }) {
   );
 }
 
-export function MapScreen({ skills, unlockAll, weekDays, plan, onStart, onCards, onCustomize }: Props) {
-  const states = useMemo(() => levelStates(skills, unlockAll), [skills, unlockAll]);
-  const byskill = useMemo(() => new Map(states.map((state) => [state.skill, state])), [states]);
+export function MapScreen(props: Props) {
+  const { skills, unlockAll, placement, onPlacement, weekDays, plan, onStart, onCards, onCustomize } = props;
+  const { introSeen, onLesson, ranks, onCertificate } = props;
+  const topRank = ranks[ranks.length - 1];
+  const states = useMemo(() => levelStates(skills, unlockAll, placement), [skills, unlockAll, placement]);
+  const byskill = useMemo(() => new Map(states.map((state) => [state.id, state])), [states]);
   const current = currentLevel(states);
-  const [selected, setSelected] = useState<SkillId | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const selectedState = selected ? byskill.get(selected) : undefined;
 
   return (
     <div className="map">
       <Companion event="greet" variant={new Date().getDate()} />
       <Campfire days={weekDays} />
+      <div className="campfire rank-strip">
+        <span>
+          🏅{" "}
+          {topRank
+            ? `${topRank.number}-й розряд — «${topRank.title}»`
+            : "Розряду ще немає: перший дають за повністю пройдений Ліс"}
+        </span>
+        {introSeen && (
+          <button className="btn btn-quiet" onClick={onLesson}>
+            📖 Урок про соробан
+          </button>
+        )}
+      </div>
+      {!introSeen && (
+        <div className="banner banner-resume">
+          <span>Спершу познайомся із соробаном: як він збудований і якими пальцями рухати кісточки.</span>
+          <button className="btn" onClick={onLesson}>
+            Відкрити урок ▶
+          </button>
+        </div>
+      )}
+      {onPlacement && (
+        <div className="banner banner-resume">
+          <span>Доня вже вміє рахувати на абакусі? Коротка перевірка підкаже, з якого рівня почати.</span>
+          <button className="btn btn-quiet" onClick={onPlacement}>
+            Перевірити рівень
+          </button>
+        </div>
+      )}
       <Daily plan={plan} onStart={onStart} onCards={onCards} />
       {WORLDS.map((world) => {
-        const levels = world.levels.map((skill) => byskill.get(skill)!);
+        const levels = world.levels.map((level) => byskill.get(level.id)!);
         const done = levels.filter((level) => level.status === "mastered").length;
         return (
           <section key={world.id} className={`world world-${world.id}`}>
@@ -160,19 +208,24 @@ export function MapScreen({ skills, unlockAll, weekDays, plan, onStart, onCards,
               </div>
               <span className="world-count">
                 {done} / {levels.length} ⭐
+                {ranks.some((rank) => rank.world.id === world.id) && (
+                  <button className="btn btn-quiet world-cert" onClick={() => onCertificate(world.id)}>
+                    🏅 Грамота
+                  </button>
+                )}
               </span>
             </header>
             <div className="tiles">
               {levels.map((level) => (
                 <button
-                  key={level.skill}
-                  className={`tile tile-${level.status}${level.skill === current ? " tile-current" : ""}${level.skill === selected ? " tile-selected" : ""}`}
-                  onClick={() => setSelected(level.skill)}
-                  aria-label={`Рівень ${levelLabel(level.skill)}`}
+                  key={level.id}
+                  className={`tile tile-${level.status}${level.id === current ? " tile-current" : ""}${level.id === selected ? " tile-selected" : ""}`}
+                  onClick={() => setSelected(level.id)}
+                  aria-label={`Рівень ${levelLabel(level.id)}`}
                 >
-                  <span className="tile-label">{levelLabel(level.skill)}</span>
+                  <span className="tile-label">{levelLabel(level.id)}</span>
                   <span className="tile-icon">
-                    {ICONS[level.status]}
+                    {level.skipped ? "⏭" : ICONS[level.status]}
                     {level.mental.status === "mastered" ? "🧠" : ""}
                   </span>
                 </button>

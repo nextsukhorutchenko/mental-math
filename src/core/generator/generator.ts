@@ -15,7 +15,17 @@ export interface DrillConfig {
   /** Кількість дій у прикладі, тобто чисел у ланцюжку; перше число набирається з нуля. */
   actionsPerExample: number;
   /** Розрядність чисел у прикладі. */
-  digits: 1 | 2 | 3;
+  digits: 1 | 2 | 3 | 4;
+  /** Вид вправи: ланцюжок додавань і віднімань (типово), множення або ділення. */
+  kind?: "chain" | "multiply" | "divide";
+  /** Найбільше число в ланцюжку, якщо треба менше, ніж дозволяє розрядність (наприклад, лише 1–4). */
+  operandMax?: number;
+  /** Дії з числом від цього значення вважаються цільовими (наприклад, від 5 — рухи з п'ятіркою). */
+  focusOperandMin?: number;
+  /** Множення: розрядність першого множника й межі другого. */
+  factors?: { aDigits: number; bMin: number; bMax: number };
+  /** Ділення без остачі: розрядність частки й межі дільника. */
+  quotient?: { digits: number; divisorMin: number; divisorMax: number };
   /** Знаки дій після першого числа. */
   operations: Sign | "mixed";
   /** Найбільший дозволений проміжний результат. За замовчуванням на розряд більше за числа. */
@@ -27,6 +37,10 @@ export interface DrillConfig {
 export interface Example {
   steps: Step[];
   answer: number;
+  /** Запис завдання для множення й ділення («47 × 6»); у ланцюжків його немає. */
+  prompt?: string;
+  /** Підписи до кроків у демонстрації (часткові добутки, цифри частки). */
+  labels?: string[];
 }
 
 export interface Drill {
@@ -43,6 +57,7 @@ const LOOKAHEAD_SAMPLE = 40;
 interface Context {
   allowed: Set<SkillId>;
   focus: Set<SkillId>;
+  focusOperandMin: number;
   focusShare: number;
   operandMin: number;
   operandMax: number;
@@ -56,6 +71,8 @@ interface Context {
   reachCache: Map<string, boolean>;
   /** Скільки разів кожен цільовий прийом уже трапився в наборі — щоб ділити дії між ними порівну. */
   focusUses: Map<SkillId, number>;
+  /** Чи є взагалі цільові дії (прийоми або великі числа). */
+  hasFocus: boolean;
 }
 
 function validate(config: DrillConfig): void {
@@ -66,8 +83,8 @@ function validate(config: DrillConfig): void {
   if (!Number.isInteger(actionsPerExample) || actionsPerExample < 2) {
     throw new GeneratorError("У прикладі має бути щонайменше 2 дії");
   }
-  if (![1, 2, 3].includes(digits)) {
-    throw new GeneratorError("Розрядність чисел має бути 1, 2 або 3");
+  if (![1, 2, 3, 4].includes(digits)) {
+    throw new GeneratorError("Розрядність чисел має бути від 1 до 4");
   }
   if (focusShare !== undefined && (focusShare < 0 || focusShare > 1)) {
     throw new GeneratorError("Частка цільового прийому має бути від 0 до 1");
@@ -81,14 +98,22 @@ function validate(config: DrillConfig): void {
 }
 
 function isFocus(step: Step, ctx: Context): boolean {
-  return step.requiredSkills.some((skill) => ctx.focus.has(skill));
+  return step.operand >= ctx.focusOperandMin || step.requiredSkills.some((skill) => ctx.focus.has(skill));
 }
+
+/** Скільки чисел перебирати від одного положення: для 4 цифр усі 9000 перебирати задовго. */
+const OPERAND_SAMPLE = 300;
 
 /** Усі кроки, які можна зробити від числа value, не виходячи за дозволені прийоми й межі. */
 function candidates(value: number, signs: readonly Sign[], ctx: Context): Step[] {
   const result: Step[] = [];
+  const range = ctx.operandMax - ctx.operandMin + 1;
+  const operands =
+    range > 1000
+      ? Array.from({ length: OPERAND_SAMPLE }, () => ctx.operandMin + Math.floor(ctx.random() * range))
+      : Array.from({ length: range }, (_, index) => ctx.operandMin + index);
   for (const sign of signs) {
-    for (let operand = ctx.operandMin; operand <= ctx.operandMax; operand++) {
+    for (const operand of operands) {
       const step = buildStep(value, sign, operand, ctx.rodCount);
       if (!step || step.after > ctx.maxValue) continue;
       if (step.requiredSkills.every((skill) => ctx.allowed.has(skill))) result.push(step);
@@ -156,7 +181,7 @@ function chooseNext(previous: Step, ctx: Context): Step | null {
   if (notUndo.length > 0) options = notUndo;
   if (options.length === 0) return null;
 
-  if (ctx.focus.size === 0 || ctx.random() >= ctx.focusShare) return pick(ctx.random, options);
+  if (!ctx.hasFocus || ctx.random() >= ctx.focusShare) return pick(ctx.random, options);
   if (ctx.focus.size > 1) return chooseBalanced(options, ctx);
 
   const focused = options.filter((step) => isFocus(step, ctx));
@@ -190,7 +215,7 @@ function tryExample(actions: number, ctx: Context): Example | null {
     countFocus(next, ctx);
     steps.push(next);
   }
-  if (steps.length < actions || (ctx.focus.size > 0 && !steps.some((step) => isFocus(step, ctx)))) {
+  if (steps.length < actions || (ctx.hasFocus && !steps.some((step) => isFocus(step, ctx)))) {
     ctx.focusUses = usesBefore;
     return null;
   }
@@ -200,13 +225,18 @@ function tryExample(actions: number, ctx: Context): Example | null {
 export function generateDrill(config: DrillConfig): Drill {
   validate(config);
   const seed = config.seed ?? Math.floor(Math.random() * 2 ** 32);
+  if (config.kind === "multiply" || config.kind === "divide") {
+    return { config, seed, examples: generateFacts(config, createRandom(seed)) };
+  }
   const maxValue = config.maxValue ?? 10 ** (config.digits + 1) - 1;
   const ctx: Context = {
     allowed: new Set(config.allowedSkills),
     focus: new Set(config.focusSkills ?? []),
+    focusOperandMin: config.focusOperandMin ?? Infinity,
+    hasFocus: (config.focusSkills ?? []).length > 0 || config.focusOperandMin !== undefined,
     focusShare: config.focusShare ?? 0.4,
     operandMin: config.digits === 1 ? 1 : 10 ** (config.digits - 1),
-    operandMax: 10 ** config.digits - 1,
+    operandMax: Math.min(config.operandMax ?? Infinity, 10 ** config.digits - 1),
     maxValue,
     rodCount: String(maxValue).length + 1,
     signs: config.operations === "mixed" ? ["+", "-"] : [config.operations],
@@ -233,8 +263,88 @@ export function generateDrill(config: DrillConfig): Drill {
   return { config, seed, examples };
 }
 
+const digitsOf = (value: number) => String(value).split("").map(Number);
+
+/**
+ * Множення на соробані як накопичення часткових добутків: цифри першого множника беруться зліва направо,
+ * кожен добуток додається на абакус у своєму розряді. Кроки — звичайні додавання, тому демонстрація рухів
+ * і облік прийомів працюють так само, як для ланцюжків.
+ */
+export function multiplyExample(a: number, b: number): Example {
+  const product = a * b;
+  const rods = String(product).length + 1;
+  const steps: Step[] = [];
+  const labels: string[] = [];
+  let value = 0;
+  const aDigits = digitsOf(a);
+  const bDigits = digitsOf(b);
+  aDigits.forEach((da, i) => {
+    bDigits.forEach((db, j) => {
+      const left = da * 10 ** (aDigits.length - 1 - i);
+      const right = db * 10 ** (bDigits.length - 1 - j);
+      if (left * right === 0) return;
+      const step = buildStep(value, "+", left * right, rods);
+      if (!step) throw new GeneratorError(`Не вдалося розкласти ${a} × ${b}`);
+      steps.push(step);
+      labels.push(`${left} × ${right} = ${left * right}`);
+      value = step.after;
+    });
+  });
+  return { steps, labels, answer: product, prompt: `${a} × ${b}` };
+}
+
+/**
+ * Ділення без остачі: ділене набирається на абакус, далі для кожної цифри частки віднімається
+ * «цифра × дільник» у своєму розряді, доки абакус не спорожніє. Відповідь — частка.
+ */
+export function divideExample(dividend: number, divisor: number): Example {
+  const quotient = dividend / divisor;
+  if (!Number.isInteger(quotient)) throw new GeneratorError(`${dividend} не ділиться на ${divisor} без остачі`);
+  const rods = String(dividend).length + 1;
+  const first = buildStep(0, "+", dividend, rods)!;
+  const steps: Step[] = [first];
+  const labels: string[] = [`Набери ${dividend}`];
+  let value = dividend;
+  const qDigits = digitsOf(quotient);
+  qDigits.forEach((digit, index) => {
+    const place = 10 ** (qDigits.length - 1 - index);
+    if (digit === 0) return;
+    const step = buildStep(value, "-", digit * place * divisor, rods);
+    if (!step) throw new GeneratorError(`Не вдалося розкласти ${dividend} : ${divisor}`);
+    steps.push(step);
+    labels.push(`у частці ${digit * place}: ${digit * place} × ${divisor} = ${digit * place * divisor}`);
+    value = step.after;
+  });
+  return { steps, labels, answer: quotient, prompt: `${dividend} : ${divisor}` };
+}
+
+function generateFacts(config: DrillConfig, random: Random): Example[] {
+  const between = (min: number, max: number) => min + Math.floor(random() * (max - min + 1));
+  const examples: Example[] = [];
+  let guard = 0;
+  while (examples.length < config.exampleCount) {
+    if (++guard > config.exampleCount * 200) throw new GeneratorError("Не вдалося скласти приклади з такими межами");
+    let example: Example;
+    if (config.kind === "multiply") {
+      const { aDigits, bMin, bMax } = config.factors ?? { aDigits: 1, bMin: 2, bMax: 9 };
+      const a = aDigits === 1 ? between(2, 9) : between(10 ** (aDigits - 1), 10 ** aDigits - 1);
+      example = multiplyExample(a, between(bMin, bMax));
+    } else {
+      const { digits, divisorMin, divisorMax } = config.quotient ?? { digits: 1, divisorMin: 2, divisorMax: 9 };
+      const q = digits === 1 ? between(2, 9) : between(10 ** (digits - 1), 10 ** digits - 1);
+      const divisor = between(divisorMin, divisorMax);
+      example = divideExample(q * divisor, divisor);
+    }
+    // Той самий приклад двічі поспіль не даємо.
+    if (example.prompt === examples[examples.length - 1]?.prompt) continue;
+    examples.push(example);
+  }
+  return examples;
+}
+
 /** Запис прикладу рядком: «3 + 4 − 2 = 5». */
 export function formatExample(example: Example): string {
+  if (example.prompt) return `${example.prompt} = ${example.answer}`;
   const parts = example.steps.map((step, index) => {
     if (index === 0) return String(step.operand);
     return `${step.operation === "+" ? "+" : "−"} ${step.operand}`;

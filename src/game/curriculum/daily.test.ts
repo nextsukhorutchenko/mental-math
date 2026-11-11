@@ -176,7 +176,7 @@ describe("заняття на сьогодні", () => {
     const plan = dailyPlan(emptySave(), now);
     expect(plan.map((part) => part.id)).toEqual(["cards", "level"]);
     expect(plan[0]).toMatchObject({ done: false, cards: { kind: "set", digits: 1, count: 10 } });
-    expect(plan[1]).toMatchObject({ done: false, lesson: { topic: "simple", exampleCount: 10, actionsPerExample: 3 } });
+    expect(plan[1]).toMatchObject({ done: false, lesson: { level: "simple:low", exampleCount: 10, actionsPerExample: 3 } });
     expect(dailyPlan(emptySave(), new Date(2026, 10, 12, 17))[0]).toMatchObject({ cards: { kind: "read" } });
     expect(dailyPlan(emptySave(), new Date(2026, 10, 13, 17))[0]).toMatchObject({
       cards: { kind: "memory", digits: 1, count: 5, span: 2, showSeconds: 2 },
@@ -209,7 +209,8 @@ describe("заняття на сьогодні", () => {
     expect(plan.map((part) => part.id)).toEqual(["cards", "review", "level"]);
     expect(plan[0]).toMatchObject({ cards: { digits: 2 } });
     expect(plan[1]).toMatchObject({ done: false, lesson: { review: ["simple"], topic: "simple" } });
-    expect(plan[2]).toMatchObject({ lesson: { topic: "five:+2" } });
+    // «1–4» і «5–9» не займані, але після них уже засвоєно інші рівні — тож вони не повертають назад.
+    expect(plan[2]).toMatchObject({ lesson: { topic: "five:+2", level: "five:+2" } });
   });
 
   it("позначає зроблене сьогодні", () => {

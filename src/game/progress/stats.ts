@@ -1,4 +1,4 @@
-import { ALL_SKILLS, type SkillId } from "../../core/rules/skills";
+import { TRACK_IDS } from "../curriculum/levels";
 import type { ModeProgress, SaveData, SessionRecord } from "../../storage/save";
 import { type Mastery, localDay, masteryOf } from "./progress";
 
@@ -44,7 +44,8 @@ export function weekStats(history: readonly SessionRecord[], now: Date): WeekSta
 }
 
 export interface SkillRow {
-  skill: SkillId;
+  /** id рівня або прийому. */
+  skill: string;
   physical: Mastery;
   mental: Mastery;
   /** Частка самостійних серед останніх застосувань на абакусі; null — ще не тренували. */
@@ -60,7 +61,7 @@ function accuracy(progress: ModeProgress | undefined, window: number): { value: 
 
 /** Прийоми, які вже тренували, у порядку програми. */
 export function skillRows(skills: SaveData["skills"]): SkillRow[] {
-  return ALL_SKILLS.filter((skill) => {
+  return TRACK_IDS.filter((skill) => {
     const progress = skills[skill];
     return progress && progress.physical.total + progress.mental.total > 0;
   }).map((skill) => {

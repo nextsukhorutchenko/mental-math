@@ -13,7 +13,8 @@ import {
 } from "../../storage/save";
 import type { Bonus } from "../rewards/blocks";
 import { REWARDS, WEEK_GOAL, addLoot, sessionLoot, weekActiveDays, weekId, withLoot } from "../rewards/rewards";
-import { type Session, skillUses, summarize } from "../session/session";
+import { levelById } from "../curriculum/levels";
+import { type Session, isClean, skillUses, summarize } from "../session/session";
 
 /** Правила засвоєння прийому; фізичний і ментальний режими оцінюються окремо. */
 export const MASTERY: Record<Mode, { minCorrect: number; window: number; minCleanInWindow: number; minDays: number }> = {
@@ -104,6 +105,8 @@ export interface Credit {
   partial: boolean;
   /** Заняття було повторенням раніше засвоєних прийомів. */
   review?: boolean;
+  /** Рівень карти, з якого запущено заняття. */
+  level?: string;
   session: Session;
 }
 
@@ -126,7 +129,7 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
 
   const day = localDay(credit.finishedAt);
   const skills = { ...save.skills };
-  const counts = new Map<SkillId, { uses: number; clean: number }>();
+  const counts = new Map<string, { uses: number; clean: number }>();
   for (const use of skillUses(credit.session)) {
     const current = skills[use.skill] ?? { physical: emptyMode(), mental: emptyMode() };
     skills[use.skill] = { ...current, [credit.mode]: recordUse(current[credit.mode], use.clean, day) };
@@ -134,6 +137,23 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
     count.uses++;
     if (use.clean) count.clean++;
     counts.set(use.skill, count);
+  }
+  // Рівень, який не є окремим прийомом (1–4, багатоцифрові, множення, ділення), веде власний лік:
+  // кожна дія прикладу — одне застосування рівня.
+  const level = levelById(credit.level);
+  if (level && level.kind !== "formula") {
+    credit.session.results.forEach((result, index) => {
+      const clean = isClean(result);
+      const steps = credit.session.drill.examples[index]?.steps.length ?? 0;
+      for (let i = 0; i < steps; i++) {
+        const current = skills[level.id] ?? { physical: emptyMode(), mental: emptyMode() };
+        skills[level.id] = { ...current, [credit.mode]: recordUse(current[credit.mode], clean, day) };
+        const count = counts.get(level.id) ?? { uses: 0, clean: 0 };
+        count.uses++;
+        if (clean) count.clean++;
+        counts.set(level.id, count);
+      }
+    });
   }
   const touched = new Set(counts.keys());
 
@@ -151,7 +171,7 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
   }
 
   // Нагороди нараховуються тим самим записом, що й прогрес, тому теж не дублюються.
-  const { loot, accurate } = sessionLoot(credit.session, credit.topic, credit.partial);
+  const { loot, accurate } = sessionLoot(credit.session, credit.topic, credit.partial, credit.level);
   const bonuses: Bonus[] = accurate ? ["accuracy"] : [];
   const newlyMastered = [...touched].filter(
     (skill) =>
@@ -176,6 +196,7 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
     failed,
     partial: credit.partial,
     review: credit.review === true,
+    ...(credit.level ? { level: credit.level } : {}),
     earned: loot,
     bonuses,
   };
@@ -213,6 +234,7 @@ export function closeActive(save: SaveData, now: Date): SaveData {
         mode: active.setup.mode,
         partial: true,
         review: !!active.setup.review,
+        level: active.setup.level,
         session,
       })
     : save;

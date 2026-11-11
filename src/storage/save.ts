@@ -15,7 +15,16 @@ import {
   starterInventory,
 } from "../game/rewards/blocks";
 import type { CardRecord } from "../game/cards/types";
-import { DEFAULT_SETUP, type LessonSetup, type Mode, SETUP_LIMITS, toDrillConfig } from "../game/session/setup";
+import { LEVEL_IDS, TRACK_IDS } from "../game/curriculum/levels";
+import {
+  DEFAULT_SETUP,
+  type LessonSetup,
+  type Mode,
+  PACINGS,
+  type Pacing,
+  SETUP_LIMITS,
+  toDrillConfig,
+} from "../game/session/setup";
 
 export type { Mode };
 
@@ -48,6 +57,8 @@ export interface SessionRecord {
   partial: boolean;
   /** Заняття було повторенням раніше засвоєних прийомів. */
   review: boolean;
+  /** Рівень карти, якщо заняття запущено з нього. */
+  level?: string;
   /** Блоки, здобуті за це заняття. */
   earned: Loot;
   /** Особливі нагороди цього заняття. */
@@ -68,7 +79,8 @@ export interface ActiveSession {
 
 export interface SaveData {
   version: 1;
-  skills: Partial<Record<SkillId, SkillProgress>>;
+  /** Прогрес за рівнями й прийомами; ключ — id рівня або прийому. */
+  skills: Partial<Record<string, SkillProgress>>;
   history: SessionRecord[];
   active: ActiveSession | null;
   setup: LessonSetup;
@@ -85,6 +97,16 @@ export interface SaveData {
   sound: boolean;
   /** Завершені набори карток з абакусом. */
   cardLog: CardRecord[];
+  /** Рівень, з якого починати за стартовою перевіркою; null — з самого початку. */
+  placement: string | null;
+  /** Ім'я дитини для грамот; зберігається лише на цьому пристрої. */
+  childName: string;
+  /** Чи пройдено вступний урок про будову соробану й пальці. */
+  introSeen: boolean;
+  /** Найвищий пройдений рівень флеш-виклику (0 — ще не проходили). */
+  flashBest: number;
+  /** Коли здобуто розряд за світ: id світу → дата (ISO). */
+  rankDates: Record<string, string>;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -109,6 +131,11 @@ export function emptySave(): SaveData {
     weekGoalsPaid: [],
     sound: true,
     cardLog: [],
+    placement: null,
+    childName: "",
+    introSeen: false,
+    flashBest: 0,
+    rankDates: {},
   };
 }
 
@@ -118,6 +145,8 @@ type Obj = Record<string, unknown>;
 const isObj = (value: unknown): value is Obj => typeof value === "object" && value !== null && !Array.isArray(value);
 const isCount = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0;
 const isSkill = (value: unknown): value is SkillId => ALL_SKILLS.includes(value as SkillId);
+const isTrack = (value: unknown): value is string => TRACK_IDS.includes(value as string);
+const isLevel = (value: unknown): value is string => LEVEL_IDS.includes(value as string);
 const isMode = (value: unknown): value is Mode => value === "physical" || value === "mental";
 const isDate = (value: unknown): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value));
 const isDay = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -138,13 +167,14 @@ function parseSetup(value: unknown): LessonSetup | null {
   const review = Array.isArray(value.review) ? value.review.filter(isSkill) : [];
   return {
     ...(review.length > 0 ? { review } : {}),
+    ...(isLevel(value.level) ? { level: value.level } : {}),
     topic: value.topic,
     exampleCount,
     actionsPerExample,
     digits,
     operations,
     mode: isMode(value.mode) ? value.mode : DEFAULT_SETUP.mode,
-    pacing: pacing === "all" || pacing === "manual" || pacing === "auto" ? pacing : DEFAULT_SETUP.pacing,
+    pacing: PACINGS.includes(pacing as Pacing) ? (pacing as Pacing) : DEFAULT_SETUP.pacing,
     secondsPerNumber: validSeconds ? secondsPerNumber : DEFAULT_SETUP.secondsPerNumber,
   };
 }
@@ -223,6 +253,7 @@ function parseRecord(value: unknown): SessionRecord | null {
     failed,
     partial: value.partial === true,
     review: value.review === true,
+    ...(isLevel(value.level) ? { level: value.level } : {}),
     earned: parseLoot(value.earned),
     bonuses: Array.isArray(value.bonuses) ? value.bonuses.filter(isBonus) : [],
   };
@@ -263,7 +294,7 @@ export function parseSave(value: unknown): SaveData | null {
   if (!isObj(value) || value.version !== 1 || !isObj(value.skills) || !Array.isArray(value.history)) return null;
   const skills: SaveData["skills"] = {};
   for (const [key, progress] of Object.entries(value.skills)) {
-    if (!isSkill(key) || !isObj(progress)) continue;
+    if (!isTrack(key) || !isObj(progress)) continue;
     skills[key] = { physical: parseMode(progress.physical), mental: parseMode(progress.mental) };
   }
   const seen = new Set<string>();
@@ -290,6 +321,15 @@ export function parseSave(value: unknown): SaveData | null {
       : [],
     // У старих збереженнях налаштування немає — звук увімкнено.
     sound: value.sound !== false,
+    placement: isLevel(value.placement) ? value.placement : null,
+    childName: typeof value.childName === "string" ? value.childName.slice(0, 40) : "",
+    introSeen: value.introSeen === true,
+    flashBest: isCount(value.flashBest) ? Math.min(value.flashBest, 99) : 0,
+    rankDates: isObj(value.rankDates)
+      ? Object.fromEntries(
+          Object.entries(value.rankDates).filter((entry): entry is [string, string] => isDate(entry[1])).slice(0, 20),
+        )
+      : {},
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

@@ -1,11 +1,16 @@
 import type { DrillConfig } from "../../core/generator/generator";
 import { ALL_SKILLS, type SkillId } from "../../core/rules/skills";
+import { levelById } from "../curriculum/levels";
 
 /** Фізичний абакус або уявний; прогрес у них рахується окремо. */
 export type Mode = "physical" | "mental";
 
-/** Як показувати числа: весь приклад, по одному вручну або по одному із заданим темпом. */
-export type Pacing = "all" | "manual" | "auto";
+/**
+ * Як подавати числа: весь приклад, по одному вручну, по одному із заданим темпом,
+ * голосом застосунку (voice) або вголос дорослим, який читає з екрана (reader).
+ */
+export type Pacing = "all" | "manual" | "auto" | "voice" | "reader";
+export const PACINGS: Pacing[] = ["all", "manual", "auto", "voice", "reader"];
 
 /** Вибір батьків: тема, обсяг і спосіб тренування. */
 export interface LessonSetup {
@@ -20,6 +25,8 @@ export interface LessonSetup {
   secondsPerNumber: number;
   /** Повторення: кілька раніше засвоєних прийомів замість однієї теми. */
   review?: SkillId[];
+  /** Рівень карти, з якого запущено заняття: він задає вид вправ і межі чисел. */
+  level?: string;
 }
 
 export const DEFAULT_SETUP: LessonSetup = {
@@ -52,6 +59,10 @@ export function mentalTryout(setup: LessonSetup): LessonSetup {
 
 /** Дозволені прийоми — усе, що в програмі йде до вибраної теми, і сама тема. */
 export function toDrillConfig(setup: LessonSetup): DrillConfig {
+  const level = levelById(setup.level);
+  if (level && !setup.review?.length) {
+    return { ...level.drill, exampleCount: setup.exampleCount, actionsPerExample: setup.actionsPerExample };
+  }
   const review = setup.review?.length ? setup.review : null;
   const last = Math.max(...[setup.topic, ...(review ?? [])].map((skill) => ALL_SKILLS.indexOf(skill)));
   return {

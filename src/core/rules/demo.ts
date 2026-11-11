@@ -12,6 +12,16 @@ export interface DemoFrame {
   caption: string;
   /** Чи це останній рух дії (число на абакусі вже відповідає результату дії). */
   stepDone: boolean;
+  /** Яким пальцем виконується рух; для стартового кадру — null. */
+  finger: string | null;
+}
+
+/**
+ * Правило двох пальців: великий лише присуває нижні кісточки вгору до планки,
+ * усе інше — вказівний (відсуває нижні, рухає верхню в обидва боки).
+ */
+export function fingerFor(move: BeadMove): string {
+  return move.bead === "lower" && move.direction === "on" ? "великим пальцем" : "вказівним пальцем";
 }
 
 const ROD_NAMES = ["одиницях", "десятках", "сотнях", "тисячах"];
@@ -48,6 +58,7 @@ export function buildDemoFrames(steps: readonly Step[], rodCount = rodsFor(steps
       stepIndex: -1,
       caption: first.before === 0 ? "Почни з порожнього абакуса" : `На абакусі ${first.before}`,
       stepDone: true,
+      finger: null,
     },
   ];
   steps.forEach((step, stepIndex) => {
@@ -60,6 +71,7 @@ export function buildDemoFrames(steps: readonly Step[], rodCount = rodsFor(steps
         stepIndex,
         caption: describeMove(move),
         stepDone: moveIndex === step.beadMoves.length - 1,
+        finger: fingerFor(move),
       });
     });
   });

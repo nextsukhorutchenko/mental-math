@@ -18,13 +18,14 @@ export function registerServiceWorker(onUpdate: (apply: () => void) => void): vo
   navigator.serviceWorker
     .register("sw.js")
     .then((registration) => {
-      offer(registration);
-      registration.addEventListener("updatefound", () => {
-        const installing = registration.installing;
-        installing?.addEventListener("statechange", () => {
-          if (installing.state === "installed") offer(registration);
+      const watch = (worker: ServiceWorker | null) =>
+        worker?.addEventListener("statechange", () => {
+          if (worker.state === "installed") offer(registration);
         });
-      });
+      offer(registration);
+      // Оновлення могло початися ще до цього рядка — тоді подія updatefound уже минула.
+      watch(registration.installing);
+      registration.addEventListener("updatefound", () => watch(registration.installing));
     })
     .catch(() => {
       // Без service worker застосунок працює як звичайна сторінка.

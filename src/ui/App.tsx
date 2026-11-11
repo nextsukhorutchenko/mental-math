@@ -3,7 +3,9 @@ import { GeneratorError, generateDrill } from "../core/generator/generator";
 import type { SkillId } from "../core/rules/skills";
 import { creditCards } from "../game/cards/cards";
 import { type CardSetup, DEFAULT_CARDS } from "../game/cards/types";
+import { earnedRanks, levelStates } from "../game/curriculum/curriculum";
 import { dailyPlan } from "../game/curriculum/daily";
+import { creditFlash } from "../game/flash/flash";
 import { closeActive, creditSession, restoreSession } from "../game/progress/progress";
 import type { Bonus, Loot } from "../game/rewards/blocks";
 import { weekActiveDays } from "../game/rewards/rewards";
@@ -12,16 +14,20 @@ import { type LessonSetup, mentalTryout, toDrillConfig } from "../game/session/s
 import { browserStore, loadSave, writeSave } from "../storage/localStore";
 import type { SaveData } from "../storage/save";
 import { CardsScreen } from "./screens/CardsScreen";
+import { CertificateScreen } from "./screens/CertificateScreen";
+import { FlashScreen } from "./screens/FlashScreen";
+import { SorobanLessonScreen } from "./screens/SorobanLessonScreen";
 import { IslandScreen } from "./screens/IslandScreen";
 import { LessonScreen, Summary } from "./screens/LessonScreen";
 import { MapScreen } from "./screens/MapScreen";
 import { ParentsScreen } from "./screens/ParentsScreen";
+import { PlacementScreen } from "./screens/PlacementScreen";
 import { SetupScreen } from "./screens/SetupScreen";
 import { registerServiceWorker } from "./pwa";
 import { playSound, setSoundEnabled } from "./sound";
 
 type Tab = "map" | "cards" | "island" | "trainer" | "parents";
-type Screen = Tab | "lesson" | "summary";
+type Screen = Tab | "lesson" | "summary" | "placement" | "soroban" | "flash" | "certificate";
 
 interface Finished {
   session: Session;
@@ -48,6 +54,8 @@ export function App() {
   /** Тема, з якою тренажер відкрили з картки рівня. */
   const [presetTopic, setPresetTopic] = useState<SkillId | null>(null);
   /** Набір карток, запущений із плану дня: стартує одразу; key перезапускає екран. */
+  /** Світ, грамоту за який зараз показуємо. */
+  const [certWorld, setCertWorld] = useState<string | null>(null);
   const [cardsRun, setCardsRun] = useState<{ setup: CardSetup; key: number } | null>(null);
 
   // Кожна зміна прогресу одразу пишеться в сховище; невдачу показуємо батькам.
@@ -68,6 +76,19 @@ export function App() {
   useEffect(() => {
     registerServiceWorker((apply) => setApplyUpdate(() => apply));
   }, []);
+
+  // Дата здобуття розряду фіксується в момент, коли світ уперше пройдено повністю.
+  useEffect(() => {
+    const fresh = earnedRanks(levelStates(save.skills, save.unlockAll, save.placement)).filter(
+      (rank) => !save.rankDates[rank.world.id],
+    );
+    if (fresh.length === 0) return;
+    const now = new Date().toISOString();
+    setSave((current) => ({
+      ...current,
+      rankDates: { ...current.rankDates, ...Object.fromEntries(fresh.map((rank) => [rank.world.id, now])) },
+    }));
+  }, [save.skills, save.unlockAll, save.placement, save.rankDates]);
 
   const active = save.active;
   // Приклади незавершеного заняття відтворюються з seed, тому перераховуємо лише для нового заняття.
@@ -120,6 +141,7 @@ export function App() {
         mode: setup.mode,
         partial: false,
         review: !!setup.review,
+        level: setup.level,
         session: next,
       };
       // Зарахування, нагороди й закриття заняття — один запис; повтор із тим самим id нічого не змінить.
@@ -150,6 +172,11 @@ export function App() {
     return creditCards(save, credit).cardLog.find((record) => record.id === credit.id)?.earned ?? {};
   };
 
+  const openCertificate = (world: string) => {
+    setCertWorld(world);
+    setScreen("certificate");
+  };
+
   const markStarted = () =>
     setSave((current) => (current.active ? { ...current, active: { ...current.active, started: true } } : current));
 
@@ -161,7 +188,21 @@ export function App() {
 
   const inLesson = screen === "lesson" && active && session;
   const inSummary = screen === "summary" && finished;
-  const tab: Tab = screen === "lesson" || screen === "summary" ? "map" : screen;
+  const inPlacement = screen === "placement";
+  // Екрани на весь застосунок: без вкладок і банерів.
+  const inOverlay = inPlacement || screen === "soroban" || screen === "flash" || screen === "certificate";
+  const tab: Tab =
+    screen === "map" || screen === "cards" || screen === "island" || screen === "trainer" || screen === "parents"
+      ? screen
+      : screen === "flash"
+        ? "trainer"
+        : "map";
+  const states = useMemo(
+    () => levelStates(save.skills, save.unlockAll, save.placement),
+    [save.skills, save.unlockAll, save.placement],
+  );
+  const ranks = useMemo(() => earnedRanks(states), [states]);
+  const certificate = ranks.find((rank) => rank.world.id === certWorld) ?? null;
   const trainerSetup = presetTopic ? { ...save.setup, topic: presetTopic } : save.setup;
 
   return (
@@ -207,7 +248,7 @@ export function App() {
         </p>
       )}
 
-      {!inLesson && !inSummary && (
+      {!inLesson && !inSummary && !inOverlay && (
         <nav className="tabs" aria-label="Розділи">
           {TABS.map((item) => (
             <button
@@ -222,7 +263,7 @@ export function App() {
         </nav>
       )}
 
-      {!inLesson && !inSummary && active && session && (
+      {!inLesson && !inSummary && !inOverlay && active && session && (
         <div className="banner banner-resume">
           <span>
             Є незавершене тренування: приклад {active.index + 1} з {active.setup.exampleCount}.
@@ -255,7 +296,7 @@ export function App() {
             onMentalTry={() => start(mentalTryout(finished.setup), false)}
             onExit={() => setScreen("map")}
           />
-        ) : tab === "trainer" ? (
+        ) : screen === "trainer" ? (
           <SetupScreen
             key={JSON.stringify(trainerSetup)}
             initial={trainerSetup}
@@ -263,6 +304,35 @@ export function App() {
             active={session ? active : null}
             error={error}
             onStart={(setup) => start(setup, true)}
+            onFlash={() => setScreen("flash")}
+          />
+        ) : screen === "soroban" ? (
+          <SorobanLessonScreen
+            onDone={() => {
+              setSave((current) => ({ ...current, introSeen: true }));
+              setScreen("map");
+            }}
+          />
+        ) : screen === "flash" ? (
+          <FlashScreen
+            best={save.flashBest}
+            onResult={(level, correctRounds) => setSave((current) => creditFlash(current, level, correctRounds))}
+            onExit={() => setScreen("trainer")}
+          />
+        ) : screen === "certificate" && certificate ? (
+          <CertificateScreen
+            rank={certificate}
+            childName={save.childName}
+            earnedAt={save.rankDates[certificate.world.id]}
+            onClose={() => setScreen("map")}
+          />
+        ) : inPlacement ? (
+          <PlacementScreen
+            onApply={(placement) => {
+              setSave((current) => ({ ...current, placement }));
+              setScreen("map");
+            }}
+            onCancel={() => setScreen("map")}
           />
         ) : tab === "cards" ? (
           <CardsScreen
@@ -283,11 +353,26 @@ export function App() {
             onReplace={setSave}
             onExported={(at) => setSave((current) => ({ ...current, lastExportAt: at }))}
             onUnlockAll={(unlockAll) => setSave((current) => ({ ...current, unlockAll }))}
+            ranks={ranks}
+            onCertificate={openCertificate}
+            onChildName={(childName) => setSave((current) => ({ ...current, childName }))}
+            onPlacement={() => setScreen("placement")}
+            onResetPlacement={() => setSave((current) => ({ ...current, placement: null }))}
           />
         ) : (
           <MapScreen
             skills={save.skills}
             unlockAll={save.unlockAll}
+            placement={save.placement}
+            introSeen={save.introSeen}
+            onLesson={() => setScreen("soroban")}
+            ranks={ranks}
+            onCertificate={openCertificate}
+            onPlacement={
+              save.placement === null && save.history.length === 0 && Object.keys(save.skills).length === 0
+                ? () => setScreen("placement")
+                : null
+            }
             weekDays={weekActiveDays([...save.history, ...save.cardLog], new Date())}
             plan={dailyPlan(save, new Date())}
             onCards={(setup) => {

@@ -1,5 +1,5 @@
 /** Будівельні блоки власного світу застосунку. Файл без залежностей: його читає і збереження, і гра. */
-export const BLOCKS = ["grass", "wood", "stone", "sand", "ice", "crystal"] as const;
+export const BLOCKS = ["grass", "wood", "stone", "sand", "ice", "brick", "gold", "glass", "crystal"] as const;
 export type BlockId = (typeof BLOCKS)[number];
 
 export const BLOCK_NAMES: Record<BlockId, string> = {
@@ -8,6 +8,9 @@ export const BLOCK_NAMES: Record<BlockId, string> = {
   stone: "камінь",
   sand: "пісок",
   ice: "лід",
+  brick: "цегла",
+  gold: "золото",
+  glass: "скло",
   crystal: "кристал",
 };
 
@@ -22,7 +25,17 @@ export type Island = (BlockId | null)[];
 export const isBlock = (value: unknown): value is BlockId => BLOCKS.includes(value as BlockId);
 
 /** Стартовий набір, щоб острів можна було почати одразу. */
-export const starterInventory = (): Inventory => ({ grass: 12, wood: 0, stone: 0, sand: 0, ice: 0, crystal: 0 });
+export const starterInventory = (): Inventory => ({
+  grass: 12,
+  wood: 0,
+  stone: 0,
+  sand: 0,
+  ice: 0,
+  brick: 0,
+  gold: 0,
+  glass: 0,
+  crystal: 0,
+});
 export const emptyIsland = (): Island => Array<BlockId | null>(ISLAND_COLS * ISLAND_ROWS).fill(null);
 
 /** Особливі нагороди, які показуємо окремим рядком у підсумку. */

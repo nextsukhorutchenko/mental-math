@@ -1,5 +1,5 @@
 import { type ChangeEvent, useRef, useState } from "react";
-import { describeSkill } from "../../core/rules/skills";
+import { trackTitle } from "../../game/curriculum/levels";
 import { localDay } from "../../game/progress/progress";
 import { BEFORE_IMPORT_KEY, browserStore, writeSave } from "../../storage/localStore";
 import { type SaveData, parseExportText, toExportText } from "../../storage/save";
@@ -72,7 +72,7 @@ export function BackupPanel({ save, onReplace, onExported }: Props) {
                 <span>{formatDate(record.finishedAt)}</span>
                 <span>
                   {record.mode === "mental" ? "🧠" : "🧮"}{" "}
-                  {record.review ? "Повторення" : record.topic === "simple" ? "Прямі рухи" : describeSkill(record.topic)}
+                  {record.review ? "Повторення" : trackTitle(record.level ?? record.topic)}
                 </span>
                 <b>
                   {record.clean} з {record.total}

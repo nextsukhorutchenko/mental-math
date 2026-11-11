@@ -21,6 +21,13 @@ export interface Step {
   requiredSkills: SkillId[];
   /** Рухи в порядку виконання; кожен перевірено на моделі абакуса. */
   beadMoves: BeadMove[];
+  /** Де саме застосовано кожен прийом: спиця 0 — одиниці. Потрібно для розбору помилок. */
+  skillRods: SkillUseAt[];
+}
+
+export interface SkillUseAt {
+  skill: SkillId;
+  rod: number;
 }
 
 class Overflow extends Error {}
@@ -28,7 +35,13 @@ class Overflow extends Error {}
 interface Work {
   abacus: Abacus;
   skills: SkillId[];
+  skillRods: SkillUseAt[];
   moves: BeadMove[];
+}
+
+function use(work: Work, skill: SkillId, rod: number): void {
+  work.skills.push(skill);
+  work.skillRods.push({ skill, rod });
 }
 
 function move(work: Work, rod: number, bead: BeadMove["bead"], direction: BeadMove["direction"], count: number): void {
@@ -67,14 +80,14 @@ function addOnRod(work: Work, pos: number, n: number): void {
   const rod = rodAt(work, pos);
 
   if (canAddDirect(rod, n)) {
-    work.skills.push(SIMPLE);
+    use(work, SIMPLE, pos);
     addDirect(work, pos, n);
     return;
   }
 
   if (n <= 4 && !rod.upper) {
     // Нижніх кісточок бракує, але п'ятірка вільна: +n = +5 −(5−n)
-    work.skills.push(skillId("five", "+", n));
+    use(work, skillId("five", "+", n), pos);
     move(work, pos, "upper", "on", 1);
     move(work, pos, "lower", "off", 5 - n);
     return;
@@ -83,11 +96,11 @@ function addOnRod(work: Work, pos: number, n: number): void {
   // Сума на спиці ≥ 10: знімаємо доповнення до 10 і додаємо десяток.
   const complement = 10 - n;
   if (canSubDirect(rod, complement)) {
-    work.skills.push(skillId("ten", "+", n));
+    use(work, skillId("ten", "+", n), pos);
     subDirect(work, pos, complement);
   } else {
     // Доповнення напряму не знімається: +n = +(n−5) −5 +10
-    work.skills.push(skillId("mix", "+", n));
+    use(work, skillId("mix", "+", n), pos);
     move(work, pos, "lower", "on", n - 5);
     move(work, pos, "upper", "off", 1);
   }
@@ -99,14 +112,14 @@ function subOnRod(work: Work, pos: number, n: number): void {
   const rod = rodAt(work, pos);
 
   if (canSubDirect(rod, n)) {
-    work.skills.push(SIMPLE);
+    use(work, SIMPLE, pos);
     subDirect(work, pos, n);
     return;
   }
 
   if (n <= 4 && rod.upper) {
     // Нижніх кісточок бракує, але п'ятірка стоїть: −n = −5 +(5−n)
-    work.skills.push(skillId("five", "-", n));
+    use(work, skillId("five", "-", n), pos);
     move(work, pos, "upper", "off", 1);
     move(work, pos, "lower", "on", 5 - n);
     return;
@@ -115,7 +128,7 @@ function subOnRod(work: Work, pos: number, n: number): void {
   // Цифра на спиці менша за n: позичаємо десяток і додаємо доповнення до 10.
   const complement = 10 - n;
   const direct = canAddDirect(rod, complement);
-  work.skills.push(skillId(direct ? "ten" : "mix", "-", n));
+  use(work, skillId(direct ? "ten" : "mix", "-", n), pos);
   subOnRod(work, pos + 1, 1);
   if (direct) {
     addDirect(work, pos, complement);
@@ -142,7 +155,7 @@ export function buildStep(
   const expected = operation === "+" ? before + operand : before - operand;
   if (expected >= 10 ** rodCount) return null;
 
-  const work: Work = { abacus: fromNumber(before, rodCount), skills: [], moves: [] };
+  const work: Work = { abacus: fromNumber(before, rodCount), skills: [], skillRods: [], moves: [] };
   const digits = String(operand).split("").map(Number);
   try {
     digits.forEach((digit, index) => {
@@ -167,5 +180,6 @@ export function buildStep(
     after,
     requiredSkills: [...new Set(work.skills)],
     beadMoves: work.moves,
+    skillRods: work.skillRods,
   };
 }

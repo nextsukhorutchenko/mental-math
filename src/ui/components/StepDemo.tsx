@@ -11,7 +11,7 @@ function stepLabel(step: Step, index: number): string {
 }
 
 /** Покрокова демонстрація рухів кісточок для ланцюжка дій. */
-export function StepDemo({ steps }: { steps: readonly Step[] }) {
+export function StepDemo({ steps, labels }: { steps: readonly Step[]; labels?: readonly string[] }) {
   const frames = useMemo(() => buildDemoFrames(steps), [steps]);
   const [index, setIndex] = useState(0);
   const frame = frames[Math.min(index, frames.length - 1)];
@@ -23,8 +23,11 @@ export function StepDemo({ steps }: { steps: readonly Step[] }) {
     <div className="demo">
       <AbacusView abacus={frame.abacus} previous={frame.previous} />
       <div className="demo-text">
-        <div className="demo-action">{step ? stepLabel(step, frame.stepIndex) : "Старт"}</div>
+        <div className="demo-action">
+          {step ? (labels?.[frame.stepIndex] ?? stepLabel(step, frame.stepIndex)) : "Старт"}
+        </div>
         <p className="demo-caption">{frame.caption}</p>
+        {frame.finger && <p className="demo-finger">☝ {frame.finger}</p>}
         <p className="demo-value">
           {frame.stepDone ? `На абакусі: ${toNumber(frame.abacus)}` : "…ще один рух"}
         </p>

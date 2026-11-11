@@ -1,11 +1,12 @@
-import { describeSkill } from "../../core/rules/skills";
+import { trackTitle } from "../../game/curriculum/levels";
+import type { Rank } from "../../game/curriculum/curriculum";
 import type { Mastery } from "../../game/progress/progress";
 import { skillRows, weakSpots, weekStats } from "../../game/progress/stats";
 import type { SaveData } from "../../storage/save";
 import { BackupPanel } from "./BackupPanel";
 
 const WEEKDAYS = ["нд", "пн", "вт", "ср", "чт", "пт", "сб"];
-const skillName = (skill: string) => (skill === "simple" ? "Прямі рухи" : describeSkill(skill as never));
+const skillName = trackTitle;
 const percent = (value: number | null) => (value === null ? "—" : `${Math.round(value * 100)}%`);
 
 function masteryCell(mastery: Mastery): string {
@@ -18,9 +19,15 @@ interface Props {
   onReplace: (save: SaveData) => void;
   onExported: (at: string) => void;
   onUnlockAll: (value: boolean) => void;
+  onPlacement: () => void;
+  onResetPlacement: () => void;
+  ranks: Rank[];
+  onCertificate: (world: string) => void;
+  onChildName: (name: string) => void;
 }
 
-export function ParentsScreen({ save, onReplace, onExported, onUnlockAll }: Props) {
+export function ParentsScreen(props: Props) {
+  const { save, onReplace, onExported, onUnlockAll, onPlacement, onResetPlacement, ranks, onCertificate, onChildName } = props;
   const week = weekStats(save.history, new Date());
   const rows = skillRows(save.skills);
   const weak = weakSpots(save.skills);
@@ -117,11 +124,63 @@ export function ParentsScreen({ save, onReplace, onExported, onUnlockAll }: Prop
       </section>
 
       <section className="panel">
+        <h2>Розряди й грамоти</h2>
+        <label className="field">
+          <span>Ім’я для грамоти</span>
+          <input
+            className="text-input"
+            type="text"
+            maxLength={40}
+            value={save.childName}
+            placeholder="Наприклад, Софійка"
+            onChange={(event) => onChildName(event.target.value)}
+          />
+          <span className="note">Ім’я зберігається лише на цьому пристрої й нікуди не надсилається.</span>
+        </label>
+        {ranks.length === 0 ? (
+          <p className="note">
+            Розряд дається за повністю пройдений світ — коли всі його рівні засвоєно на абакусі. Розрядів сім: від 7-го
+            за Ліс до 1-го за Небесні острови. Це власна шкала застосунку, а не офіційні кю чи дан.
+          </p>
+        ) : (
+          <ul className="history">
+            {ranks.map((rank) => (
+              <li key={rank.world.id}>
+                <b>
+                  {rank.number}-й розряд — «{rank.title}»
+                </b>
+                <span>світ «{rank.world.title}»</span>
+                <button className="btn btn-quiet" onClick={() => onCertificate(rank.world.id)}>
+                  🏅 Грамота
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel">
         <h2>Карта</h2>
         <label className="check">
           <input type="checkbox" checked={save.unlockAll} onChange={(event) => onUnlockAll(event.target.checked)} />
           <span>Відкрити всі рівні на карті, не чекаючи засвоєння попередніх</span>
         </label>
+        <p className="note">
+          {save.placement
+            ? `За стартовою перевіркою заняття починаються з рівня «${skillName(save.placement)}».`
+            : "Заняття йдуть із самого початку програми."}{" "}
+          Перевірка — це кілька прикладів без підказок; прогрес вона не змінює.
+        </p>
+        <div className="row">
+          <button className="btn btn-quiet" onClick={onPlacement}>
+            Пройти стартову перевірку
+          </button>
+          {save.placement && (
+            <button className="btn btn-quiet" onClick={onResetPlacement}>
+              Почати з початку програми
+            </button>
+          )}
+        </div>
       </section>
 
       <BackupPanel save={save} onReplace={onReplace} onExported={onExported} />

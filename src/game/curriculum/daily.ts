@@ -3,7 +3,7 @@ import type { SaveData } from "../../storage/save";
 import { type CardSetup, DEFAULT_CARDS } from "../cards/types";
 import { localDay, masteryOf, overdueDays } from "../progress/progress";
 import { DEFAULT_SETUP, type LessonSetup } from "../session/setup";
-import { currentLevel, levelLabel, levelStates, recommendLesson } from "./curriculum";
+import { currentLevel, hasActions, levelLabel, levelStates, recommendLesson } from "./curriculum";
 
 /** Скільки прийомів повторюємо за одне заняття: більше — і на кожен припаде замало дій. */
 export const REVIEW_LIMIT = 3;
@@ -90,14 +90,14 @@ export function dailyPlan(save: SaveData, now: Date): DailyPart[] {
     });
   }
 
-  const states = levelStates(save.skills, save.unlockAll);
+  const states = levelStates(save.skills, save.unlockAll, save.placement);
   const current = currentLevel(states);
-  const state = states.find((item) => item.skill === current) ?? states[states.length - 1]!;
+  const state = states.find((item) => item.id === current) ?? states[states.length - 1]!;
   const next = recommendLesson(state);
   parts.push({
     id: "level",
-    title: `Рівень ${levelLabel(state.skill)}: ${next.title.toLowerCase()}`,
-    detail: `${next.setup.exampleCount} прикладів по ${next.setup.actionsPerExample} ${actionsWord(next.setup.actionsPerExample)}${next.setup.mode === "mental" ? ", подумки" : ""}`,
+    title: `Рівень ${state.level.label}: ${next.title.toLowerCase()}`,
+    detail: `${next.setup.exampleCount} прикладів${hasActions(state.level) ? ` по ${next.setup.actionsPerExample} ${actionsWord(next.setup.actionsPerExample)}` : ""}${next.setup.mode === "mental" ? ", подумки" : ""}`,
     done: lessonsToday.some((record) => !record.review && !record.partial),
     lesson: next.setup,
   });

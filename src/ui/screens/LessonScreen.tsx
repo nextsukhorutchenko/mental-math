@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
-import { formatExample } from "../../core/generator/generator";
+import { type Example, formatExample, generateDrill } from "../../core/generator/generator";
 import { introSteps } from "../../core/rules/demo";
+import { diagnose } from "../../core/rules/diagnose";
 import { type SkillId, describeSkill, explainSkill } from "../../core/rules/skills";
 import type { Step } from "../../core/rules/step";
 import {
@@ -13,15 +14,28 @@ import {
   summarize,
 } from "../../game/session/session";
 import type { Bonus, Loot } from "../../game/rewards/blocks";
-import type { LessonSetup, Mode } from "../../game/session/setup";
+import { type LessonSetup, type Mode, toDrillConfig } from "../../game/session/setup";
 import { LootList } from "../components/Block";
 import { Companion } from "../components/Companion";
 import { playSound } from "../sound";
+import { levelById } from "../../game/curriculum/levels";
+import { DictationPlayer } from "../components/DictationPlayer";
 import { Keypad } from "../components/Keypad";
 import { SequencePlayer } from "../components/SequencePlayer";
 import { StepDemo } from "../components/StepDemo";
 
-function ExampleColumn({ steps }: { steps: readonly Step[] }) {
+const stepText = (step: Step, index: number) =>
+  index === 0 ? String(step.operand) : `${step.operation === "+" ? "+" : "−"}${step.operand}`;
+
+export function ExampleColumn({ steps, prompt }: { steps: readonly Step[]; prompt?: string }) {
+  // Множення й ділення записуються одним рядком, ланцюжки — стовпчиком.
+  if (prompt) {
+    return (
+      <div className="example example-prompt" aria-label="Приклад">
+        {prompt}
+      </div>
+    );
+  }
   return (
     <div className="example" aria-label="Приклад">
       {steps.map((step, index) => (
@@ -35,14 +49,29 @@ function ExampleColumn({ steps }: { steps: readonly Step[] }) {
   );
 }
 
-function Intro({ topic, mode, onStart }: { topic: SkillId; mode: Mode; onStart: () => void }) {
-  const steps = useMemo(() => introSteps(topic), [topic]);
+interface IntroProps {
+  setup: LessonSetup;
+  /** Seed заняття: зразок для вступу береться з іншого seed, щоб не підказати відповідь на перше завдання. */
+  seed: number;
+  onStart: () => void;
+}
+
+function Intro({ setup, seed, onStart }: IntroProps) {
+  const { topic, mode } = setup;
+  const level = levelById(setup.level);
+  // Для формул показуємо найкоротший зразок прийому, для решти рівнів — окремий приклад того самого виду.
+  const demo: Pick<Example, "steps" | "labels" | "prompt"> = useMemo(() => {
+    if (!level || level.kind === "formula") return { steps: introSteps(topic) };
+    const config = { ...toDrillConfig({ ...setup, exampleCount: 1 }), seed: (seed + 1) >>> 0 };
+    return generateDrill(config).examples[0]!;
+  }, [level, setup, seed, topic]);
   return (
     <section className="panel">
       <p className="eyebrow">{mode === "mental" ? "Рахуємо подумки" : "Тема заняття"}</p>
-      <h2>{topic === "simple" ? "Прямі рухи" : describeSkill(topic)}</h2>
-      <p className="lead">{explainSkill(topic)}</p>
-      <StepDemo steps={steps} />
+      <h2>{level?.title ?? (topic === "simple" ? "Прямі рухи" : describeSkill(topic))}</h2>
+      <p className="lead">{level?.explain ?? explainSkill(topic)}</p>
+      {demo.prompt && <p className="prompt">Наприклад: {demo.prompt}</p>}
+      <StepDemo steps={demo.steps} labels={demo.labels} />
       <p className="note">
         {mode === "mental"
           ? "Цього разу абакус відклади. Уявляй його перед собою і пересувай кісточки подумки."
@@ -62,7 +91,8 @@ interface PracticeProps {
 }
 
 function Practice({ session, setup, onChange }: PracticeProps) {
-  const sequential = setup.pacing !== "all";
+  // Множення й ділення завжди показуються цілим записом: подавати їх по одному числу немає сенсу.
+  const sequential = setup.pacing !== "all" && !currentExample(session)?.prompt;
   const mental = setup.mode === "mental";
   const [input, setInput] = useState("");
   const [showDemo, setShowDemo] = useState(false);
@@ -74,6 +104,11 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   const answering = session.status === "answering";
   const retry = answering && session.current.answers.length > 0;
   const playing = answering && !showDemo && !shown;
+  // Розбір останньої хибної відповіді: здогад про причину, не вирок.
+  const lastAnswer = session.current.answers[session.current.answers.length - 1];
+  const clues =
+    lastAnswer === undefined || session.status === "solved" || example.prompt ? [] : diagnose(example.steps, lastAnswer);
+  const clue = clues[0];
 
   const submit = () => {
     const answered = submitAnswer(session, Number(input));
@@ -122,7 +157,14 @@ function Practice({ session, setup, onChange }: PracticeProps) {
         </div>
       )}
 
-      {playing ? (
+      {playing && (setup.pacing === "voice" || setup.pacing === "reader") ? (
+        <DictationPlayer
+          steps={example.steps}
+          pacing={setup.pacing}
+          secondsPerNumber={setup.secondsPerNumber}
+          onDone={() => setShown(true)}
+        />
+      ) : playing ? (
         <SequencePlayer
           steps={example.steps}
           pacing={setup.pacing === "auto" ? "auto" : "manual"}
@@ -132,12 +174,18 @@ function Practice({ session, setup, onChange }: PracticeProps) {
       ) : (
         <div className={`work${sequential && answering && !showDemo ? " work-single" : ""}`}>
           {/* Коли числа йдуть по одному, стовпчик видно лише в підказці й розборі. */}
-          {(!sequential || !answering || showDemo) && <ExampleColumn steps={example.steps} />}
+          {(!sequential || !answering || showDemo) && <ExampleColumn steps={example.steps} prompt={example.prompt} />}
 
           <div className="work-side">
             {answering && !showDemo && (
               <>
                 <p className={`prompt${retry ? " prompt-retry" : ""}`}>{prompt}</p>
+                {/* Після першої помилки лише вказуємо, яку дію перевірити; повний розбір — після другої. */}
+                {retry && clue?.stepIndex !== undefined && (
+                  <p className="clue">
+                    💡 Перевір {clue.stepIndex + 1}-шу дію: {stepText(example.steps[clue.stepIndex]!, clue.stepIndex)}
+                  </p>
+                )}
                 <Companion event={retry ? "retry" : "ask"} variant={session.index} />
                 <div className="answer" aria-live="polite">
                   {input || "?"}
@@ -153,7 +201,7 @@ function Practice({ session, setup, onChange }: PracticeProps) {
 
             {answering && showDemo && (
               <>
-                <StepDemo key={session.index} steps={example.steps} />
+                <StepDemo key={session.index} steps={example.steps} labels={example.labels} />
                 <button className="btn" onClick={() => setShowDemo(false)}>
                   Зрозуміло, вводжу відповідь
                 </button>
@@ -178,11 +226,16 @@ function Practice({ session, setup, onChange }: PracticeProps) {
               <div className="feedback feedback-review">
                 <p className="feedback-title">Розберімо разом</p>
                 <Companion event="review" variant={session.index} />
+                {clues.map((item, index) => (
+                  <p key={index} className="clue">
+                    💡 {item.text}
+                  </p>
+                ))}
                 <p>
                   Правильна відповідь: {example.answer}.{" "}
                   {mental ? "Простеж за рухами й уяви їх." : "Повтори рухи на своєму абакусі."}
                 </p>
-                <StepDemo key={session.index} steps={example.steps} />
+                <StepDemo key={session.index} steps={example.steps} labels={example.labels} />
                 <button className="btn btn-big" onClick={next}>
                   Далі ▶
                 </button>
@@ -272,6 +325,16 @@ export function Summary(props: SummaryProps) {
             <span>{isClean(result) ? "✅" : result.solved ? "🟡" : "❌"}</span>{" "}
             {formatExample(session.drill.examples[index]!)}
             {!result.solved && <em> (відповіді: {result.answers.join(", ")})</em>}
+            {!isClean(result) &&
+              result.answers[0] !== undefined &&
+              !session.drill.examples[index]!.prompt &&
+              diagnose(session.drill.examples[index]!.steps, result.answers[0])
+                .slice(0, 1)
+                .map((item) => (
+                  <span key="clue" className="review-clue">
+                    {item.text}
+                  </span>
+                ))}
           </li>
         ))}
       </ol>
@@ -311,6 +374,6 @@ export function LessonScreen({ setup, started, session, onStart, onSession }: Pr
     window.scrollTo(0, 0);
   }, [started, session.index]);
 
-  if (!started) return <Intro topic={setup.topic} mode={setup.mode} onStart={onStart} />;
+  if (!started) return <Intro setup={setup} seed={session.drill.seed} onStart={onStart} />;
   return <Practice key={session.index} session={session} setup={setup} onChange={onSession} />;
 }

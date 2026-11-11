@@ -57,6 +57,18 @@ export function AbacusView({ abacus, previous, showDigits = true }: Props) {
         );
       })}
       <rect className="abacus-beam" x={3} y={BEAM_Y} width={width - 6} height={BEAM_H} />
+      {/* Розрядні цятки: спиця одиниць і кожна третя від неї. */}
+      {abacus.map((_, index) =>
+        index % 3 === 0 ? (
+          <circle
+            key={index}
+            className="abacus-dot"
+            cx={width - PAD - ROD_GAP / 2 - index * ROD_GAP}
+            cy={BEAM_Y + BEAM_H / 2}
+            r={2.5}
+          />
+        ) : null,
+      )}
     </svg>
   );
 }

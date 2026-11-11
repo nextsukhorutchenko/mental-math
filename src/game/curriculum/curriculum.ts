@@ -1,65 +1,79 @@
-import { ALL_SKILLS, type SkillFamily, type SkillId, skillFamily } from "../../core/rules/skills";
 import type { SaveData } from "../../storage/save";
 import { type Mastery, masteryOf } from "../progress/progress";
 import { DEFAULT_SETUP, type LessonSetup } from "../session/setup";
+import { LEVELS, LEVEL_IDS, type Level, type LevelId, WORLDS, type World, levelById } from "./levels";
 
-/** Світ на карті — одна родина прийомів; рівень — один прийом. */
-export interface World {
-  id: "forest" | "caves" | "desert" | "snow";
-  title: string;
-  subtitle: string;
-  family: SkillFamily;
-  levels: SkillId[];
-}
+export { WORLDS, LEVELS, type World, type Level, type LevelId };
 
-const world = (id: World["id"], title: string, subtitle: string, family: SkillFamily): World => ({
-  id,
-  title,
-  subtitle,
-  family,
-  levels: ALL_SKILLS.filter((skill) => skillFamily(skill) === family),
-});
-
-export const WORLDS: World[] = [
-  world("forest", "Ліс", "Прямі рухи без формул", "simple"),
-  world("caves", "Печери", "Молодші друзі: через п'ятірку", "five"),
-  world("desert", "Пустеля", "Старші друзі: через десяток", "ten"),
-  world("snow", "Снігові гори", "Комбіновані формули", "mix"),
-];
-
-/** Короткий напис на плитці рівня: «+4», «−7» або «1–9» для прямих рухів. */
-export function levelLabel(skill: SkillId): string {
-  return skill === "simple" ? "1–9" : skill.split(":")[1]!.replace("-", "−");
+/** Короткий напис на плитці рівня: «+4», «1–4», «47×6». */
+export function levelLabel(id: LevelId): string {
+  return levelById(id)?.label ?? id;
 }
 
 export interface LevelState {
-  skill: SkillId;
+  id: LevelId;
+  level: Level;
   /** locked — ще зачинено; open — можна починати; learning — у роботі; mastered — засвоєно на абакусі. */
   status: "locked" | "open" | "learning" | "mastered";
   physical: Mastery;
   mental: Mastery;
+  /** Рівень до місця, визначеного стартовою перевіркою: відкритий, але за нього не беремося. */
+  skipped: boolean;
 }
 
 /**
  * Рівень відкривається, коли попередній засвоєно на фізичному абакусі.
- * Швидкість і ментальний рахунок проходження не блокують. Батьки можуть відкрити все вручну.
+ * Швидкість і ментальний рахунок проходження не блокують. Батьки можуть відкрити все вручну,
+ * а стартова перевірка (placement) відкриває все до рівня, з якого дитина починає.
  */
-export function levelStates(skills: SaveData["skills"], unlockAll: boolean): LevelState[] {
+export function levelStates(
+  progress: SaveData["skills"],
+  unlockAll: boolean,
+  placement: LevelId | null = null,
+): LevelState[] {
+  const startIndex = Math.max(0, placement ? LEVEL_IDS.indexOf(placement) : 0);
+  // Нові рівні, вставлені в програму перед уже засвоєними (наприклад, «1–4» для тих, хто вже на формулах),
+  // не повертають дитину назад: незайманий рівень до останнього засвоєного вважається пропущеним.
+  // Беремо саме засвоєні, а не розпочаті: проба формули у вільному тренажері нічого не пропускає.
+  const lastMastered = LEVELS.reduce(
+    (last, level, index) => (masteryOf(progress[level.id]?.physical, "physical").status === "mastered" ? index : last),
+    -1,
+  );
   let previousMastered = true;
-  return ALL_SKILLS.map((skill) => {
-    const physical = masteryOf(skills[skill]?.physical, "physical");
-    const mental = masteryOf(skills[skill]?.mental, "mental");
-    const reachable = previousMastered || unlockAll || physical.status !== "new";
+  return LEVELS.map((level, index) => {
+    const physical = masteryOf(progress[level.id]?.physical, "physical");
+    const mental = masteryOf(progress[level.id]?.mental, "mental");
+    const reachable = previousMastered || unlockAll || index <= startIndex || physical.status !== "new";
     previousMastered = physical.status === "mastered";
     const status =
       physical.status === "mastered" ? "mastered" : !reachable ? "locked" : physical.status === "new" ? "open" : "learning";
-    return { skill, status, physical, mental };
+    const skipped =
+      status !== "mastered" && (index < startIndex || (physical.status === "new" && index < lastMastered));
+    return { id: level.id, level, status, physical, mental, skipped };
   });
 }
 
-/** Рівень, на якому дитина зараз: перший незасвоєний. */
-export function currentLevel(states: readonly LevelState[]): SkillId | null {
-  return states.find((state) => state.status !== "mastered")?.skill ?? null;
+/** Рівень, на якому дитина зараз: перший незасвоєний, не раніше місця зі стартової перевірки. */
+export function currentLevel(states: readonly LevelState[]): LevelId | null {
+  return states.find((state) => state.status !== "mastered" && !state.skipped)?.id ?? null;
+}
+
+/** Розряд — це повністю пройдений світ. Розряди рахуються від старшого номера до першого. */
+export interface Rank {
+  world: World;
+  /** Номер розряду: 7 — за перший світ, 1 — за останній. */
+  number: number;
+  title: string;
+}
+
+export function rankFor(world: World): Rank {
+  return { world, number: WORLDS.length - WORLDS.indexOf(world), title: world.rank };
+}
+
+/** Розряди за світи, у яких усі рівні засвоєно на абакусі. */
+export function earnedRanks(states: readonly LevelState[]): Rank[] {
+  const mastered = new Set(states.filter((state) => state.status === "mastered").map((state) => state.id));
+  return WORLDS.filter((world) => world.levels.every((level) => mastered.has(level.id))).map(rankFor);
 }
 
 export interface Recommendation {
@@ -68,21 +82,50 @@ export interface Recommendation {
   setup: LessonSetup;
 }
 
-/** Наступне заняття рівня за нормами програми: знайомство → практика → мікс → подумки → повторення. */
-export function recommendLesson(state: LevelState): Recommendation {
-  const base: LessonSetup = { ...DEFAULT_SETUP, topic: state.skill };
-  const lesson = (
-    stage: Recommendation["stage"],
-    title: string,
-    exampleCount: number,
-    actionsPerExample: number,
-    mode: LessonSetup["mode"] = "physical",
-  ): Recommendation => ({ stage, title, setup: { ...base, exampleCount, actionsPerExample, mode } });
+/** Обсяг заняття на кожному етапі: [прикладів, дій]. Множення й ділення дій у ланцюжку не мають. */
+const VOLUME: Record<Level["kind"], Record<Recommendation["stage"], [number, number]>> = {
+  formula: { intro: [10, 3], practice: [20, 4], mix: [20, 5], mental: [10, 3], review: [10, 5] },
+  chain: { intro: [10, 3], practice: [15, 4], mix: [15, 5], mental: [8, 3], review: [10, 4] },
+  multiply: { intro: [10, 2], practice: [15, 2], mix: [20, 2], mental: [10, 2], review: [10, 2] },
+  divide: { intro: [10, 2], practice: [15, 2], mix: [20, 2], mental: [10, 2], review: [10, 2] },
+};
 
-  if (state.physical.status === "new") return lesson("intro", "Знайомство", 10, 3);
-  if (state.physical.status !== "mastered") {
-    return state.physical.correct < 60 ? lesson("practice", "Практика", 20, 4) : lesson("mix", "Закріплення", 20, 5);
-  }
-  if (state.mental.status !== "mastered") return lesson("mental", "Подумки", 10, 3, "mental");
-  return lesson("review", "Повторення", 10, 5);
+const STAGE_TITLES: Record<Recommendation["stage"], string> = {
+  intro: "Знайомство",
+  practice: "Практика",
+  mix: "Закріплення",
+  mental: "Подумки",
+  review: "Повторення",
+};
+
+/** Налаштування заняття для рівня: тема для формул — сам прийом, для решти — рівень. */
+export function levelSetup(level: Level, exampleCount: number, actionsPerExample: number): LessonSetup {
+  return {
+    ...DEFAULT_SETUP,
+    topic: level.skill ?? "simple",
+    level: level.id,
+    digits: Math.min(level.drill.digits, 3) as LessonSetup["digits"],
+    exampleCount,
+    actionsPerExample,
+  };
 }
+
+/** Наступне заняття рівня за нормами програми: знайомство → практика → закріплення → подумки → повторення. */
+export function recommendLesson(state: LevelState): Recommendation {
+  const stage: Recommendation["stage"] =
+    state.physical.status === "new"
+      ? "intro"
+      : state.physical.status !== "mastered"
+        ? state.physical.correct < 60
+          ? "practice"
+          : "mix"
+        : state.mental.status !== "mastered"
+          ? "mental"
+          : "review";
+  const [examples, actions] = VOLUME[state.level.kind][stage];
+  const setup = levelSetup(state.level, examples, actions);
+  return { stage, title: STAGE_TITLES[stage], setup: stage === "mental" ? { ...setup, mode: "mental" } : setup };
+}
+
+/** Чи рахуються дії в ланцюжку для цього рівня (для множення й ділення — ні). */
+export const hasActions = (level: Level) => level.kind === "formula" || level.kind === "chain";

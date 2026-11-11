@@ -68,15 +68,22 @@ interface Props {
   active: ActiveSession | null;
   error: string | null;
   onStart: (setup: LessonSetup) => void;
+  onFlash: () => void;
 }
 
-export function SetupScreen({ initial, skills, active, error, onStart }: Props) {
+export function SetupScreen({ initial, skills, active, error, onStart, onFlash }: Props) {
   const [setup, setSetup] = useState(initial);
   const set = (patch: Partial<LessonSetup>) => setSetup({ ...setup, ...patch });
   const mastery = masteryOf(skills[setup.topic]?.[setup.mode], setup.mode);
 
   return (
     <section className="panel">
+      <div className="banner banner-resume">
+        <span>⚡ Флеш-виклик: числа блимають — додай їх в уяві. Це необов’язкова гра на рекорд.</span>
+        <button className="btn btn-quiet" onClick={onFlash}>
+          Відкрити
+        </button>
+      </div>
       <h2>Тренажер</h2>
       <p className="note">Тут можна зібрати власне тренування: будь-яка тема, скільки завгодно прикладів і дій.</p>
 
@@ -121,9 +128,29 @@ export function SetupScreen({ initial, skills, active, error, onStart }: Props) 
             { value: "all" as const, label: "весь приклад" },
             { value: "manual" as const, label: "по одному, вручну" },
             { value: "auto" as const, label: "по одному, з темпом" },
+            { value: "voice" as const, label: "🔊 диктант: голос застосунку" },
+            { value: "reader" as const, label: "🗣 диктант: читає дорослий" },
           ]}
           onChange={(pacing) => set({ pacing })}
         />
+        {(setup.pacing === "voice" || setup.pacing === "reader") && (
+          <span className="note">
+            Диктант на слух: дитина не бачить чисел. Голос застосунку працює лише там, де є український голос;
+            якщо його немає, числа з екрана читає дорослий.
+          </span>
+        )}
+        {setup.pacing === "voice" && (
+          <>
+            <span className="note">Пауза між числами, секунд:</span>
+            <Stepper
+              value={setup.secondsPerNumber}
+              min={SETUP_LIMITS.seconds.min}
+              max={SETUP_LIMITS.seconds.max}
+              step={SETUP_LIMITS.seconds.step}
+              onChange={(secondsPerNumber) => set({ secondsPerNumber })}
+            />
+          </>
+        )}
         {setup.pacing === "auto" && (
           <>
             <span className="note">Секунд на кожне число (є пауза):</span>

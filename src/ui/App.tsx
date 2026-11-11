@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GeneratorError, generateDrill } from "../core/generator/generator";
-import type { SkillId } from "../core/rules/skills";
 import { creditCards } from "../game/cards/cards";
+import { levelById } from "../game/curriculum/levels";
 import { type CardSetup, DEFAULT_CARDS } from "../game/cards/types";
 import { earnedRanks, levelStates } from "../game/curriculum/curriculum";
 import { dailyPlan } from "../game/curriculum/daily";
@@ -53,7 +53,8 @@ export function App() {
   const [finished, setFinished] = useState<Finished | null>(null);
   const [error, setError] = useState<string | null>(null);
   /** Тема, з якою тренажер відкрили з картки рівня. */
-  const [presetTopic, setPresetTopic] = useState<SkillId | null>(null);
+  /** Тема, з якою тренажер відкрили з картки рівня: прийом або рівень множення чи ділення. */
+  const [presetTopic, setPresetTopic] = useState<string | null>(null);
   /** Набір карток, запущений із плану дня: стартує одразу; key перезапускає екран. */
   /** Світ, грамоту за який зараз показуємо. */
   const [certWorld, setCertWorld] = useState<string | null>(null);
@@ -204,7 +205,11 @@ export function App() {
   );
   const ranks = useMemo(() => earnedRanks(states), [states]);
   const certificate = ranks.find((rank) => rank.world.id === certWorld) ?? null;
-  const trainerSetup = presetTopic ? { ...save.setup, topic: presetTopic } : save.setup;
+  const trainerSetup: LessonSetup = !presetTopic
+    ? save.setup
+    : levelById(presetTopic)?.skill
+      ? { ...save.setup, topic: levelById(presetTopic)!.skill!, level: undefined }
+      : { ...save.setup, topic: "simple", level: presetTopic, pacing: "all" };
 
   return (
     <PlayerContext.Provider value={save.childName.trim() || DEFAULT_CHILD_NAME}>

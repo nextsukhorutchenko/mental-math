@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import type { SkillId } from "../../core/rules/skills";
 import {
   type LevelState,
   type Rank,
@@ -33,7 +32,8 @@ function masteryLine(name: string, mastery: Mastery): string {
 interface CardProps {
   state: LevelState;
   onStart: (setup: LessonSetup) => void;
-  onCustomize: (skill: SkillId) => void;
+  /** Відкрити тренажер із темою цього рівня (id рівня). */
+  onCustomize: (level: string) => void;
   onClose: () => void;
 }
 
@@ -68,8 +68,9 @@ function LevelCard({ state, onStart, onCustomize, onClose }: CardProps) {
                 🧠 5 коротких подумки
               </button>
             )}
-            {state.level.skill && (
-              <button className="btn btn-quiet" onClick={() => onCustomize(state.level.skill!)}>
+            {/* Ланцюжки з особливими межами (1–4, багатоцифрові) у тренажері окремої теми не мають. */}
+            {state.level.kind !== "chain" && (
+              <button className="btn btn-quiet" onClick={() => onCustomize(state.id)}>
                 Налаштувати самому
               </button>
             )}
@@ -99,7 +100,8 @@ interface Props {
   plan: DailyPart[];
   onStart: (setup: LessonSetup) => void;
   onCards: (setup: CardSetup) => void;
-  onCustomize: (skill: SkillId) => void;
+  /** Відкрити тренажер із темою цього рівня (id рівня). */
+  onCustomize: (level: string) => void;
 }
 
 /** Заняття на сьогодні: розминка, повторення старого й поточний рівень — по одній кнопці на частину. */

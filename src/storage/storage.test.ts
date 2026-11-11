@@ -122,6 +122,14 @@ describe("сумісність зі старими збереженнями", ()
   });
 });
 
+describe("тема тренажера", () => {
+  it("множення чи ділення, вибране в тренажері, зберігається; невідомий рівень відкидається", () => {
+    const setup = { ...DEFAULT_SETUP, topic: "simple" as const, level: "mul:2x1" };
+    expect(parseSave({ ...emptySave(), setup })!.setup).toEqual(setup);
+    expect(parseSave({ ...emptySave(), setup: { ...setup, level: "mul:9x9" } })!.setup.level).toBeUndefined();
+  });
+});
+
 describe("ім'я для грамот", () => {
   it("за замовчуванням — Поля, і в нових, і в старих збереженнях без імені", () => {
     expect(emptySave().childName).toBe("Поля");

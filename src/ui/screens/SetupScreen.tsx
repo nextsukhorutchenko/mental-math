@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { LEVELS, levelById } from "../../game/curriculum/levels";
 import { masteryOf } from "../../game/progress/progress";
 import { type LessonSetup, SETUP_LIMITS } from "../../game/session/setup";
 import type { ActiveSession, SaveData } from "../../storage/save";
@@ -12,6 +13,16 @@ import {
 } from "../../core/rules/skills";
 
 const MARKS = { new: "", learning: " •", mastered: " ✓" } as const;
+
+/** Рівні множення й ділення: у тренажері вони — окремі теми з готовими межами чисел. */
+const FACT_GROUPS = [
+  { kind: "multiply", title: "Множення" },
+  { kind: "divide", title: "Ділення" },
+] as const;
+const isFactLevel = (id: string | undefined) => {
+  const kind = levelById(id)?.kind;
+  return kind === "multiply" || kind === "divide";
+};
 
 const FAMILIES: SkillFamily[] = ["simple", "five", "ten", "mix"];
 const COUNT_PRESETS = [5, 10, 20, 30, 50];
@@ -74,7 +85,19 @@ interface Props {
 export function SetupScreen({ initial, skills, active, error, onStart, onFlash }: Props) {
   const [setup, setSetup] = useState(initial);
   const set = (patch: Partial<LessonSetup>) => setSetup({ ...setup, ...patch });
-  const mastery = masteryOf(skills[setup.topic]?.[setup.mode], setup.mode);
+  // Для множення й ділення тема — це рівень; для додавання й віднімання — прийом.
+  const fact = isFactLevel(setup.level);
+  const topicValue = fact ? setup.level! : setup.topic;
+  const mastery = masteryOf(skills[topicValue]?.[setup.mode], setup.mode);
+  const chooseTopic = (value: string) => {
+    if (isFactLevel(value)) set({ level: value, topic: "simple", pacing: "all" });
+    else set({ topic: value as SkillId, level: undefined });
+  };
+  /** Рівень зберігаємо лише для множення й ділення, щоб формули йшли звичним шляхом. */
+  const start = () => {
+    const { level, ...rest } = setup;
+    onStart(fact ? setup : rest);
+  };
 
   return (
     <section className="panel">
@@ -85,11 +108,13 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
         </button>
       </div>
       <h2>Тренажер</h2>
-      <p className="note">Тут можна зібрати власне тренування: будь-яка тема, скільки завгодно прикладів і дій.</p>
+      <p className="note">
+        Тут можна зібрати власне тренування: будь-яка тема, від формул додавання й віднімання до множення й ділення.
+      </p>
 
       <label className="field">
         <span>Тема</span>
-        <select value={setup.topic} onChange={(event) => set({ topic: event.target.value as SkillId })}>
+        <select value={topicValue} onChange={(event) => chooseTopic(event.target.value)}>
           {FAMILIES.map((name) => (
             <optgroup key={name} label={familyTitle(name)}>
               {ALL_SKILLS.filter((id) => skillFamily(id) === name).map((id) => (
@@ -100,7 +125,18 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
               ))}
             </optgroup>
           ))}
+          {FACT_GROUPS.map((group) => (
+            <optgroup key={group.kind} label={group.title}>
+              {LEVELS.filter((level) => level.kind === group.kind).map((level) => (
+                <option key={level.id} value={level.id}>
+                  {level.title} ({level.label})
+                  {MARKS[masteryOf(skills[level.id]?.physical, "physical").status]}
+                </option>
+              ))}
+            </optgroup>
+          ))}
         </select>
+        {fact && <span className="note">{levelById(setup.level)!.explain}</span>}
         <span className="note">
           {mastery.status === "new"
             ? `Цю тему ще не тренували ${setup.mode === "mental" ? "подумки" : "на абакусі"}.`
@@ -120,6 +156,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
         />
       </div>
 
+      {!fact && (
       <div className="field">
         <span>Показ чисел</span>
         <Choice
@@ -164,6 +201,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           </>
         )}
       </div>
+      )}
 
       <div className="field">
         <span>Кількість прикладів</span>
@@ -180,6 +218,13 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
         />
       </div>
 
+      {fact ? (
+        <p className="note">
+          Приклад показується одним записом, наприклад «47 × 6». Межі чисел задає вибрана тема; кнопка «Покажи рухи»
+          розкладає приклад на кроки для абакуса.
+        </p>
+      ) : (
+      <>
       <div className="field">
         <span>Кількість дій у прикладі</span>
         <Stepper
@@ -215,10 +260,12 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           onChange={(operations) => set({ operations })}
         />
       </div>
+      </>
+      )}
 
       {error && <p className="error">{error}</p>}
 
-      <button className="btn btn-big" onClick={() => onStart(setup)}>
+      <button className="btn btn-big" onClick={start}>
         Почати ⛏
       </button>
       {active && active.index > 0 && (

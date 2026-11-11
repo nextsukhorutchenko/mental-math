@@ -1,6 +1,9 @@
 import {
   type BlockId,
+  type Cell,
   type Inventory,
+  isCell,
+  parseCell,
   type Island,
   MAX_PLOTS,
   type Plot,
@@ -13,28 +16,39 @@ export interface Build {
   island: Island;
 }
 
+/** Матеріал деталі в клітинці (будь-якої форми). */
+export const blockOf = (cell: Cell): BlockId => parseCell(cell)!.block;
+
 /**
- * Ставить блок у клітинку. Якщо блоків цього виду немає або клітинки не існує — нічого не змінює.
- * Блок, що вже стояв у клітинці, повертається в інвентар.
+ * Ставить деталь у клітинку. Деталь будь-якої форми коштує один блок свого матеріалу.
+ * Якщо блоків немає або клітинки не існує — нічого не змінює. Деталь, що стояла в клітинці,
+ * повертається в запас; змінити форму того самого матеріалу можна безкоштовно.
  */
-export function placeBlock(build: Build, index: number, block: BlockId): Build {
-  if (index < 0 || index >= build.island.length) return build;
+export function placeBlock(build: Build, index: number, cell: Cell): Build {
+  if (index < 0 || index >= build.island.length || !isCell(cell)) return build;
   const existing = build.island[index] ?? null;
-  if (existing === block || build.inventory[block] < 1) return build;
-  const inventory = { ...build.inventory, [block]: build.inventory[block] - 1 };
-  if (existing) inventory[existing] += 1;
+  if (existing === cell) return build;
+  const block = blockOf(cell);
+  const reshape = existing !== null && blockOf(existing) === block;
+  if (!reshape && build.inventory[block] < 1) return build;
+  const inventory = { ...build.inventory };
+  if (!reshape) {
+    inventory[block] -= 1;
+    if (existing) inventory[blockOf(existing)] += 1;
+  }
   const island = [...build.island];
-  island[index] = block;
+  island[index] = cell;
   return { inventory, island };
 }
 
-/** Забирає блок із клітинки назад в інвентар. */
+/** Забирає деталь із клітинки назад у запас. */
 export function removeBlock(build: Build, index: number): Build {
   const existing = build.island[index];
   if (!existing) return build;
+  const block = blockOf(existing);
   const island = [...build.island];
   island[index] = null;
-  return { inventory: { ...build.inventory, [existing]: build.inventory[existing] + 1 }, island };
+  return { inventory: { ...build.inventory, [block]: build.inventory[block] + 1 }, island };
 }
 
 /** Скільки блоків стоїть на острові. */
@@ -57,7 +71,7 @@ export function addPlot(world: World, kind: PlotKind): World {
 export function demolishPlot(world: World, index: number): World {
   if (world.plots.length <= 1 || !world.plots[index]) return world;
   const inventory = { ...world.inventory };
-  for (const cell of world.plots[index].cells) if (cell) inventory[cell] += 1;
+  for (const cell of world.plots[index].cells) if (cell) inventory[blockOf(cell)] += 1;
   return { inventory, plots: world.plots.filter((_, i) => i !== index) };
 }
 

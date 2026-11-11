@@ -87,6 +87,58 @@ export function sessionLoot(
   return { loot, accurate };
 }
 
+/** Що з'ясовуємо про завершене заняття, щоб видати предмети за вид тренування. */
+export interface TaskInfo {
+  mode: "physical" | "mental";
+  pacing?: string;
+  levelKind?: string;
+  /** Скільки чисел у прикладі. */
+  actions: number;
+  accurate: boolean;
+}
+
+/**
+ * Предмети за різні види тренувань. Видаються лише за заняття, доведене до кінця,
+ * щонайменше з MIN_TASK_EXAMPLES прикладів, щоб їх не можна було «нафармити» короткими спробами.
+ */
+export const MIN_TASK_EXAMPLES = 5;
+export const TASK_REWARDS: { id: string; title: string; loot: Loot; applies: (info: TaskInfo) => boolean }[] = [
+  { id: "mental", title: "Заняття подумки", loot: { window: 1 }, applies: (i) => i.mode === "mental" },
+  {
+    id: "dictation",
+    title: "Диктант на слух",
+    loot: { door: 1 },
+    applies: (i) => i.pacing === "voice" || i.pacing === "reader",
+  },
+  { id: "tempo", title: "Числа з темпом", loot: { lamp: 1 }, applies: (i) => i.pacing === "auto" },
+  {
+    id: "facts",
+    title: "Множення чи ділення",
+    loot: { stairs: 2 },
+    applies: (i) => i.levelKind === "multiply" || i.levelKind === "divide",
+  },
+  {
+    id: "long",
+    title: "Довгі ланцюжки: 5+ чисел у прикладі",
+    loot: { solar: 1 },
+    applies: (i) => i.actions >= 5 && i.levelKind !== "multiply" && i.levelKind !== "divide",
+  },
+  { id: "accurate", title: "Уважне заняття: 80% самостійно", loot: { flower: 2 }, applies: (i) => i.accurate },
+];
+
+/** Предмети за вид тренування; повертає здобич, яку додати до заняття. */
+export function taskLoot(info: TaskInfo, examples: number, partial: boolean): Loot {
+  const loot: Loot = {};
+  if (partial || examples < MIN_TASK_EXAMPLES) return loot;
+  for (const task of TASK_REWARDS)
+    if (task.applies(info))
+      for (const [block, count] of Object.entries(task.loot) as [BlockId, number][]) addLoot(loot, block, count);
+  return loot;
+}
+
+/** Картки: набір із 10+ карток дає квіти, а з 20+ — ще й вікно. */
+export const CARD_ITEMS = { flowerAt: 10, windowAt: 20 } as const;
+
 /** Понеділок тижня за місцевим часом, РРРР-ММ-ДД. */
 export function weekId(date: Date): string {
   const monday = new Date(date.getFullYear(), date.getMonth(), date.getDate() - ((date.getDay() + 6) % 7));

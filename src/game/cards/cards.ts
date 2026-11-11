@@ -2,7 +2,7 @@ import { createRandom } from "../../core/generator/random";
 import { CARD_LOG_LIMIT, type SaveData } from "../../storage/save";
 import { weekGoal } from "../progress/progress";
 import type { Loot } from "../rewards/blocks";
-import { REWARDS, addLoot, withLoot } from "../rewards/rewards";
+import { CARD_ITEMS, REWARDS, addLoot, withLoot } from "../rewards/rewards";
 import type { CardRecord, CardSetup } from "./types";
 
 /** Одна трава за кожні дві правильні картки; у картках на пам'ять — за кожну правильну спробу. */
@@ -56,6 +56,9 @@ export function creditCards(save: SaveData, credit: CardCredit): SaveData {
   const correct = credit.results.filter(Boolean).length;
   const loot: Loot = {};
   addLoot(loot, "grass", credit.setup.kind === "memory" ? correct : Math.floor(correct / CARDS_PER_GRASS));
+  // Довший набір карток дає ще й предмети для будівництва.
+  if (credit.results.length >= CARD_ITEMS.flowerAt) addLoot(loot, "flower", 1);
+  if (credit.results.length >= CARD_ITEMS.windowAt) addLoot(loot, "window", 1);
   const record: CardRecord = {
     id: credit.id,
     finishedAt: credit.finishedAt.toISOString(),

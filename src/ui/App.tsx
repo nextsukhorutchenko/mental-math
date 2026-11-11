@@ -17,7 +17,6 @@ import {
   HOLIDAYS,
   type HolidayId,
   activeHoliday,
-  availableHolidays,
   chooseHoliday,
   greeting,
   seasonOf,
@@ -25,6 +24,7 @@ import {
 import { type Player, PlayerBadge, PlayerContext, SkinPicker } from "./components/Avatar";
 import { Backdrop } from "./components/Backdrop";
 import { PetPicker } from "./components/Companion";
+import { claimQuests } from "../game/island/quests";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
 import { FlashScreen } from "./screens/FlashScreen";
@@ -86,19 +86,20 @@ export function App() {
     setSoundEnabled(save.sound);
   }, [save.sound]);
 
+  // Завдання будівельника, виконані ще до їх появи (чи на іншому пристрої), нагороджуються одразу.
+  useEffect(() => {
+    setSave((current) => claimQuests(current));
+  }, []);
+
   // Фон: пора року — сама за місяцем; святковий — коли його ввімкнули.
   const today = new Date();
   const season = seasonOf(today);
   const holiday = activeHoliday(save.backdrop, today);
-  const holidays = availableHolidays(today, save.birthday);
   useEffect(() => {
     document.documentElement.dataset.scene = holiday ?? season;
   }, [holiday, season]);
   const setBackdrop = (id: HolidayId | null) =>
     setSave((current) => ({ ...current, backdrop: id ? chooseHoliday(id, new Date(), current.birthday) : null }));
-  // Кнопка у верхній панелі по черзі перемикає доступні зараз свята й звичайний фон.
-  const holidayOrder: (HolidayId | null)[] = [null, ...holidays];
-  const nextHoliday = holidayOrder[(holidayOrder.indexOf(holiday) + 1) % holidayOrder.length] ?? null;
 
   // Нова версія застосунку чекає, доки її не приймуть: посеред заняття нічого не перезавантажується.
   const [applyUpdate, setApplyUpdate] = useState<(() => void) | null>(null);
@@ -171,6 +172,7 @@ export function App() {
         partial: false,
         review: !!setup.review,
         level: setup.level,
+        pacing: setup.pacing,
         session: next,
       };
       // Зарахування, нагороди й закриття заняття — один запис; повтор із тим самим id нічого не змінить.
@@ -285,17 +287,6 @@ export function App() {
         <h1>Ментальна математика</h1>
         <div className="topbar-actions">
           <PlayerBadge />
-          {(holidays.length > 0 || holiday) && (
-            <button
-              className={`btn btn-quiet${holiday ? " btn-festive" : ""}`}
-              aria-pressed={holiday !== null}
-              aria-label={nextHoliday ? `Святковий фон: ${HOLIDAYS[nextHoliday].title}` : "Звичайний фон"}
-              title={nextHoliday ? `Святковий фон: ${HOLIDAYS[nextHoliday].title}` : "Повернути звичайний фон"}
-              onClick={() => setBackdrop(nextHoliday)}
-            >
-              {holiday ? HOLIDAYS[holiday].icon : `${HOLIDAYS[holidays[0]!].icon} Свято`}
-            </button>
-          )}
           <button
             className="btn btn-quiet"
             aria-pressed={save.sound}
@@ -425,7 +416,8 @@ export function App() {
         ) : tab === "island" ? (
           <IslandScreen
             world={{ inventory: save.inventory, plots: save.plots }}
-            onChange={(world) => setSave((current) => ({ ...current, ...world }))}
+            questsDone={save.questsDone}
+            onChange={(world) => setSave((current) => claimQuests({ ...current, ...world }))}
           />
         ) : tab === "parents" ? (
           <ParentsScreen

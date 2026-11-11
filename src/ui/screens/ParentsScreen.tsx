@@ -99,8 +99,8 @@ function BackdropPanel(props: Pick<Props, "season" | "holiday" | "onBackdrop" | 
     <section className="panel">
       <h2>Фон застосунку</h2>
       <p className="note">
-        Пора року змінюється сама: зараз {SEASON_TITLES[season]}. Святковий фон можна ввімкнути тут або кнопкою
-        вгорі, коли свято близько.
+        Пора року змінюється сама: зараз {SEASON_TITLES[season]}. Святковий фон вмикається тут. Коли свято
+        близько, фон тримається до кінця свята, а потім сам повертається до пори року.
       </p>
       <div className="choice">
         <button className={`chip${holiday === null ? " chip-active" : ""}`} onClick={() => onBackdrop(null)}>
@@ -119,8 +119,8 @@ function BackdropPanel(props: Pick<Props, "season" | "holiday" | "onBackdrop" | 
       )}
       <BirthdayPicker value={birthday} onChange={onBirthday} />
       <p className="note">
-        За тиждень до дня народження вгорі з'явиться кнопка святкового фону з кульками й тортом. Великдень
-        рахується сам щороку, Гелловін — наприкінці жовтня.
+        Фон дня народження з кульками й тортом тримається весь святковий тиждень, якщо ввімкнути його за тиждень
+        до свята. Великдень рахується сам щороку, Гелловін — наприкінці жовтня.
       </p>
     </section>
   );

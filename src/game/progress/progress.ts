@@ -11,8 +11,17 @@ import {
   type SessionRecord,
   emptyMode,
 } from "../../storage/save";
-import type { Bonus } from "../rewards/blocks";
-import { REWARDS, WEEK_GOAL, addLoot, sessionLoot, weekActiveDays, weekId, withLoot } from "../rewards/rewards";
+import type { BlockId, Bonus } from "../rewards/blocks";
+import {
+  REWARDS,
+  WEEK_GOAL,
+  addLoot,
+  sessionLoot,
+  taskLoot,
+  weekActiveDays,
+  weekId,
+  withLoot,
+} from "../rewards/rewards";
 import { levelById } from "../curriculum/levels";
 import { type Session, isClean, skillUses, summarize } from "../session/session";
 
@@ -107,6 +116,8 @@ export interface Credit {
   review?: boolean;
   /** Рівень карти, з якого запущено заняття. */
   level?: string;
+  /** Як показувалися числа: від цього залежать предмети за вид тренування. */
+  pacing?: string;
   session: Session;
 }
 
@@ -172,6 +183,14 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
 
   // Нагороди нараховуються тим самим записом, що й прогрес, тому теж не дублюються.
   const { loot, accurate } = sessionLoot(credit.session, credit.topic, credit.partial, credit.level);
+  // Кроки прикладу вже містять перше число, тож це й є кількість чисел у прикладі.
+  const numbers = credit.session.drill.examples[0]?.steps.length ?? 0;
+  const items = taskLoot(
+    { mode: credit.mode, pacing: credit.pacing, levelKind: level?.kind, actions: numbers, accurate },
+    credit.session.results.length,
+    credit.partial,
+  );
+  for (const [block, count] of Object.entries(items) as [BlockId, number][]) addLoot(loot, block, count);
   const bonuses: Bonus[] = accurate ? ["accuracy"] : [];
   const newlyMastered = [...touched].filter(
     (skill) =>
@@ -235,6 +254,7 @@ export function closeActive(save: SaveData, now: Date): SaveData {
         partial: true,
         review: !!active.setup.review,
         level: active.setup.level,
+        pacing: active.setup.pacing,
         session,
       })
     : save;

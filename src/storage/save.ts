@@ -13,7 +13,7 @@ import {
   type Plot,
   type PlotKind,
   emptyPlot,
-  isBlock,
+  isCell,
   isBonus,
   starterInventory,
 } from "../game/rewards/blocks";
@@ -121,6 +121,8 @@ export interface SaveData {
   skin: string;
   /** Вибраний супутник. */
   pet: string;
+  /** Виконані завдання будівельника (приз за кожне видається один раз). */
+  questsDone: string[];
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -157,6 +159,7 @@ export function emptySave(): SaveData {
     birthday: null,
     skin: DEFAULT_SKIN,
     pet: DEFAULT_PET,
+    questsDone: [],
   };
 }
 
@@ -255,7 +258,7 @@ function parseInventory(value: unknown): Inventory {
 function parseCells(value: unknown, kind: PlotKind): Island {
   const { cols, rows } = PLOT_SIZE[kind];
   if (!Array.isArray(value) || value.length !== cols * rows) return emptyPlot(kind).cells;
-  return value.map((cell) => (isBlock(cell) ? cell : null));
+  return value.map((cell) => (isCell(cell) ? cell : null));
 }
 
 /** Ділянки; старе збереження з одним полем island стає першою ділянкою-островом. */
@@ -373,6 +376,9 @@ export function parseSave(value: unknown): SaveData | null {
     birthday: isBirthday(value.birthday) ? value.birthday : null,
     skin: isSkinId(value.skin) ? value.skin : DEFAULT_SKIN,
     pet: isPetId(value.pet) ? value.pet : DEFAULT_PET,
+    questsDone: Array.isArray(value.questsDone)
+      ? [...new Set(value.questsDone.filter((id): id is string => typeof id === "string"))].slice(0, 100)
+      : [],
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

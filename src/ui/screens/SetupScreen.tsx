@@ -26,14 +26,14 @@ const isFactLevel = (id: string | undefined) => {
 
 /** Вид тренування — перший і найпомітніший вибір у тренажері. */
 type TrainerKind = "chain" | "multiply" | "divide";
-/** «Дії» — перший вибір у тренажері: додавання й віднімання, множення або ділення. */
+/** «Що тренуємо» — єдиний вибір виду: додавання й віднімання (разом чи окремо), множення або ділення. */
 type ActionChoice = LessonSetup["operations"] | "multiply" | "divide";
 const ACTIONS: { value: ActionChoice; label: string }[] = [
-  { value: "mixed", label: "+ і −" },
-  { value: "+", label: "лише +" },
-  { value: "-", label: "лише −" },
-  { value: "multiply", label: "× множення" },
-  { value: "divide", label: "÷ ділення" },
+  { value: "mixed", label: "➕➖ Додавання й віднімання" },
+  { value: "+", label: "➕ Лише додавання" },
+  { value: "-", label: "➖ Лише віднімання" },
+  { value: "multiply", label: "✖ Множення" },
+  { value: "divide", label: "➗ Ділення" },
 ];
 const firstLevelOf = (kind: "multiply" | "divide") => LEVELS.find((level) => level.kind === kind)!.id;
 
@@ -144,7 +144,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
       </p>
 
       <div className="field">
-        <span>Дії</span>
+        <span>Що тренуємо</span>
         <Choice value={actionValue} options={ACTIONS} onChange={chooseAction} />
       </div>
 

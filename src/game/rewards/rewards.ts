@@ -1,5 +1,4 @@
 import { type SkillFamily, type SkillId, skillFamily } from "../../core/rules/skills";
-import type { SessionRecord } from "../../storage/save";
 import { type Session, isClean } from "../session/session";
 import { type BlockId, type Inventory, type Loot } from "./blocks";
 
@@ -78,8 +77,8 @@ export function weekId(date: Date): string {
   return `${monday.getFullYear()}-${pad(monday.getMonth() + 1)}-${pad(monday.getDate())}`;
 }
 
-/** Скільки різних днів цього тижня були заняття. */
-export function weekActiveDays(history: readonly SessionRecord[], now: Date): number {
+/** Скільки різних днів цього тижня були заняття (уроки чи картки). */
+export function weekActiveDays(history: readonly { finishedAt: string }[], now: Date): number {
   const week = weekId(now);
   const days = new Set<string>();
   for (const record of history) {

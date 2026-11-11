@@ -18,6 +18,8 @@ export interface LessonSetup {
   pacing: Pacing;
   /** Скільки секунд показувати кожне число при pacing = "auto". */
   secondsPerNumber: number;
+  /** Повторення: кілька раніше засвоєних прийомів замість однієї теми. */
+  review?: SkillId[];
 }
 
 export const DEFAULT_SETUP: LessonSetup = {
@@ -50,10 +52,13 @@ export function mentalTryout(setup: LessonSetup): LessonSetup {
 
 /** Дозволені прийоми — усе, що в програмі йде до вибраної теми, і сама тема. */
 export function toDrillConfig(setup: LessonSetup): DrillConfig {
-  const allowed = ALL_SKILLS.slice(0, ALL_SKILLS.indexOf(setup.topic) + 1);
+  const review = setup.review?.length ? setup.review : null;
+  const last = Math.max(...[setup.topic, ...(review ?? [])].map((skill) => ALL_SKILLS.indexOf(skill)));
   return {
-    allowedSkills: allowed,
-    focusSkills: setup.topic === "simple" ? [] : [setup.topic],
+    allowedSkills: ALL_SKILLS.slice(0, last + 1),
+    focusSkills: review ?? (setup.topic === "simple" ? [] : [setup.topic]),
+    // У повторенні цільових прийомів кілька, тому їм дається більша частка дій.
+    ...(review ? { focusShare: 0.6 } : {}),
     exampleCount: setup.exampleCount,
     actionsPerExample: setup.actionsPerExample,
     digits: setup.digits,

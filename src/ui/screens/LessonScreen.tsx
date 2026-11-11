@@ -199,6 +199,8 @@ interface SummaryProps {
   session: Session;
   topic: SkillId;
   mode: Mode;
+  /** Прийоми, які повторювали (для заняття-повторення). */
+  review?: SkillId[];
   /** Блоки й особливі нагороди за це заняття. */
   earned: Loot;
   bonuses: Bonus[];
@@ -215,13 +217,17 @@ const BONUS_TEXT: Record<Bonus, string> = {
   week: "🔥 Тижневу ціль виконано — кристали!",
 };
 
-export function Summary({ session, topic, mode, earned, bonuses, onRepeat, onMentalTry, onExit }: SummaryProps) {
+export function Summary(props: SummaryProps) {
+  const { session, topic, mode, review, earned, bonuses, onRepeat, onMentalTry, onExit } = props;
   const summary = summarize(session);
-  const focus = summary.skills.find((tally) => tally.skill === topic);
+  const focus = review ? undefined : summary.skills.find((tally) => tally.skill === topic);
+  const reviewed = (review ?? []).map((skill) => summary.skills.find((tally) => tally.skill === skill)).filter((tally) => !!tally);
   return (
     <section className="panel">
       <Companion event="finish" variant={summary.clean} />
-      <p className="eyebrow">{mode === "mental" ? "Тренування подумки завершено" : "Тренування завершено"}</p>
+      <p className="eyebrow">
+        {review ? "Повторення завершено" : mode === "mental" ? "Тренування подумки завершено" : "Тренування завершено"}
+      </p>
       <h2>
         Самостійно: {summary.clean} з {summary.total}
       </h2>
@@ -251,6 +257,15 @@ export function Summary({ session, topic, mode, earned, bonuses, onRepeat, onMen
           розв'язаних самостійно.
         </p>
       )}
+      {reviewed.length > 0 && (
+        <p className="note">
+          Повторили:{" "}
+          {reviewed
+            .map((tally) => `${tally.skill === "simple" ? "прямі рухи" : describeSkill(tally.skill)} — ${tally.clean} з ${tally.total} самостійно`)
+            .join("; ")}
+          .
+        </p>
+      )}
       <ol className="review">
         {session.results.map((result, index) => (
           <li key={index}>
@@ -267,7 +282,7 @@ export function Summary({ session, topic, mode, earned, bonuses, onRepeat, onMen
         <button className="btn btn-big" onClick={onRepeat}>
           Ще таке саме
         </button>
-        {mode === "physical" && (
+        {mode === "physical" && !review && (
           <button className="btn" onClick={onMentalTry}>
             🧠 Спробувати 5 коротких подумки
           </button>

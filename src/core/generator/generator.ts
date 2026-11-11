@@ -53,6 +53,9 @@ interface Context {
   /** Кеш: можливі кроки від числа не залежать від історії прикладу. */
   stepCache: Map<number, Step[]>;
   focusCache: Map<number, boolean>;
+  reachCache: Map<string, boolean>;
+  /** Скільки разів кожен цільовий прийом уже трапився в наборі — щоб ділити дії між ними порівну. */
+  focusUses: Map<SkillId, number>;
 }
 
 function validate(config: DrillConfig): void {
@@ -112,6 +115,38 @@ function hasFocusCandidate(value: number, ctx: Context): boolean {
   return result;
 }
 
+function canReach(value: number, skill: SkillId, ctx: Context): boolean {
+  const key = `${value}:${skill}`;
+  let result = ctx.reachCache.get(key);
+  if (result === undefined) {
+    result = nextSteps(value, ctx).some((step) => step.requiredSkills.includes(skill));
+    ctx.reachCache.set(key, result);
+  }
+  return result;
+}
+
+/**
+ * Кілька цільових прийомів (повторення): беремо той, що досі траплявся найрідше.
+ * Якщо звідси він недоступний — готуємо для нього положення кісточок, і лише потім переходимо до наступного.
+ */
+function chooseBalanced(options: Step[], ctx: Context): Step {
+  const order = [...ctx.focus].sort((a, b) => (ctx.focusUses.get(a) ?? 0) - (ctx.focusUses.get(b) ?? 0));
+  const sampled = sample(ctx.random, options, LOOKAHEAD_SAMPLE);
+  for (const skill of order) {
+    const direct = options.filter((step) => step.requiredSkills.includes(skill));
+    if (direct.length > 0) return pick(ctx.random, direct);
+    const setups = sampled.filter((step) => canReach(step.after, skill, ctx));
+    if (setups.length > 0) return pick(ctx.random, setups);
+  }
+  return pick(ctx.random, options);
+}
+
+function countFocus(step: Step, ctx: Context): void {
+  for (const skill of step.requiredSkills) {
+    if (ctx.focus.has(skill)) ctx.focusUses.set(skill, (ctx.focusUses.get(skill) ?? 0) + 1);
+  }
+}
+
 function chooseNext(previous: Step, ctx: Context): Step | null {
   let options = nextSteps(previous.after, ctx);
   // Не скасовуємо щойно зроблену дію (+4, а потім одразу −4), якщо є інший вибір.
@@ -122,6 +157,7 @@ function chooseNext(previous: Step, ctx: Context): Step | null {
   if (options.length === 0) return null;
 
   if (ctx.focus.size === 0 || ctx.random() >= ctx.focusShare) return pick(ctx.random, options);
+  if (ctx.focus.size > 1) return chooseBalanced(options, ctx);
 
   const focused = options.filter((step) => isFocus(step, ctx));
   if (focused.length > 0) return pick(ctx.random, focused);
@@ -145,13 +181,19 @@ function firstStep(ctx: Context): Step | null {
 function tryExample(actions: number, ctx: Context): Example | null {
   const first = firstStep(ctx);
   if (!first) return null;
+  // Лічильники відхиленого прикладу не повинні впливати на наступні спроби.
+  const usesBefore = new Map(ctx.focusUses);
   const steps: Step[] = [first];
   while (steps.length < actions) {
     const next = chooseNext(steps[steps.length - 1]!, ctx);
-    if (!next) return null;
+    if (!next) break;
+    countFocus(next, ctx);
     steps.push(next);
   }
-  if (ctx.focus.size > 0 && !steps.some((step) => isFocus(step, ctx))) return null;
+  if (steps.length < actions || (ctx.focus.size > 0 && !steps.some((step) => isFocus(step, ctx)))) {
+    ctx.focusUses = usesBefore;
+    return null;
+  }
   return { steps, answer: steps[steps.length - 1]!.after };
 }
 
@@ -171,6 +213,8 @@ export function generateDrill(config: DrillConfig): Drill {
     random: createRandom(seed),
     stepCache: new Map(),
     focusCache: new Map(),
+    reachCache: new Map(),
+    focusUses: new Map(),
   };
 
   const examples: Example[] = [];

@@ -25,6 +25,10 @@ export function ParentsScreen({ save, onReplace, onExported, onUnlockAll }: Prop
   const rows = skillRows(save.skills);
   const weak = weakSpots(save.skills);
   const busiest = Math.max(1, ...week.days.map((day) => day.examples));
+  const weekAgo = Date.now() - 7 * 86_400_000;
+  const recentCards = save.cardLog.filter((record) => Date.parse(record.finishedAt) >= weekAgo);
+  const cardsTotal = recentCards.reduce((sum, record) => sum + record.total, 0);
+  const cardsCorrect = recentCards.reduce((sum, record) => sum + record.correct, 0);
 
   return (
     <>
@@ -50,6 +54,11 @@ export function ParentsScreen({ save, onReplace, onExported, onUnlockAll }: Prop
             </div>
           ))}
         </div>
+        <p className="note">
+          {cardsTotal === 0
+            ? "Карток з абакусом за цей час не було."
+            : `Картки з абакусом: ${cardsTotal} карток, правильно ${percent(cardsCorrect / cardsTotal)}.`}
+        </p>
       </section>
 
       <section className="panel">

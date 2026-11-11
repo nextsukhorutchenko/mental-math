@@ -14,7 +14,8 @@ import {
   isBonus,
   starterInventory,
 } from "../game/rewards/blocks";
-import { DEFAULT_SETUP, type LessonSetup, type Mode, SETUP_LIMITS } from "../game/session/setup";
+import type { CardRecord } from "../game/cards/types";
+import { DEFAULT_SETUP, type LessonSetup, type Mode, SETUP_LIMITS, toDrillConfig } from "../game/session/setup";
 
 export type { Mode };
 
@@ -26,6 +27,10 @@ export interface ModeProgress {
   recent: boolean[];
   /** Дні (РРРР-ММ-ДД), коли були самостійні застосування. */
   days: string[];
+  /** День останньої справжньої практики прийому — від нього рахується наступне повторення. */
+  reviewed?: string;
+  /** Скільки вдалих повторень поспіль: визначає інтервал до наступного. */
+  stage?: number;
 }
 
 export type SkillProgress = Record<Mode, ModeProgress>;
@@ -41,6 +46,8 @@ export interface SessionRecord {
   failed: number;
   /** Заняття перервали до кінця; зараховано лише розв'язані приклади. */
   partial: boolean;
+  /** Заняття було повторенням раніше засвоєних прийомів. */
+  review: boolean;
   /** Блоки, здобуті за це заняття. */
   earned: Loot;
   /** Особливі нагороди цього заняття. */
@@ -76,7 +83,11 @@ export interface SaveData {
   weekGoalsPaid: string[];
   /** Чи ввімкнено звуки. */
   sound: boolean;
+  /** Завершені набори карток з абакусом. */
+  cardLog: CardRecord[];
 }
+
+export const CARD_LOG_LIMIT = 300;
 
 export const RECENT_LIMIT = 30;
 export const DAYS_LIMIT = 60;
@@ -97,6 +108,7 @@ export function emptySave(): SaveData {
     island: emptyIsland(),
     weekGoalsPaid: [],
     sound: true,
+    cardLog: [],
   };
 }
 
@@ -108,6 +120,7 @@ const isCount = (value: unknown): value is number => Number.isInteger(value) && 
 const isSkill = (value: unknown): value is SkillId => ALL_SKILLS.includes(value as SkillId);
 const isMode = (value: unknown): value is Mode => value === "physical" || value === "mental";
 const isDate = (value: unknown): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value));
+const isDay = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
 
 function parseSetup(value: unknown): LessonSetup | null {
   if (!isObj(value) || !isSkill(value.topic)) return null;
@@ -122,7 +135,9 @@ function parseSetup(value: unknown): LessonSetup | null {
   const { seconds } = SETUP_LIMITS;
   const validSeconds =
     typeof secondsPerNumber === "number" && secondsPerNumber >= seconds.min && secondsPerNumber <= seconds.max;
+  const review = Array.isArray(value.review) ? value.review.filter(isSkill) : [];
   return {
+    ...(review.length > 0 ? { review } : {}),
     topic: value.topic,
     exampleCount,
     actionsPerExample,
@@ -140,13 +155,33 @@ function parseMode(value: unknown): ModeProgress {
   }
   const recent = Array.isArray(value.recent) ? value.recent.filter((item) => typeof item === "boolean") : [];
   const days = Array.isArray(value.days)
-    ? value.days.filter((item): item is string => typeof item === "string" && /^\d{4}-\d{2}-\d{2}$/.test(item))
+    ? value.days.filter(isDay)
     : [];
+  const { reviewed, stage } = value;
   return {
     correct: value.correct,
     total: value.total,
     recent: recent.slice(-RECENT_LIMIT),
     days: [...new Set(days)].slice(-DAYS_LIMIT),
+    ...(isDay(reviewed) ? { reviewed } : {}),
+    ...(isCount(stage) && stage <= 10 ? { stage } : {}),
+  };
+}
+
+function parseCardRecord(value: unknown): CardRecord | null {
+  if (!isObj(value) || typeof value.id !== "string" || !isDate(value.finishedAt)) return null;
+  const { kind, digits, total, correct } = value;
+  if (kind !== "read" && kind !== "set") return null;
+  if (!isCount(digits) || !isCount(total) || !isCount(correct) || correct > total) return null;
+  return {
+    id: value.id,
+    finishedAt: value.finishedAt,
+    kind,
+    digits,
+    total,
+    correct,
+    earned: parseLoot(value.earned),
+    week: value.week === true,
   };
 }
 
@@ -187,6 +222,7 @@ function parseRecord(value: unknown): SessionRecord | null {
     withHelp,
     failed,
     partial: value.partial === true,
+    review: value.review === true,
     earned: parseLoot(value.earned),
     bonuses: Array.isArray(value.bonuses) ? value.bonuses.filter(isBonus) : [],
   };
@@ -204,8 +240,6 @@ function parseActive(value: unknown): ActiveSession | null {
   const current = parseResult(value.current);
   const config = value.config;
   if (!setup || !current || !isCount(config.seed)) return null;
-  if (!Array.isArray(config.allowedSkills) || !config.allowedSkills.every(isSkill)) return null;
-  if (!Array.isArray(config.focusSkills) || !config.focusSkills.every(isSkill)) return null;
   if (!isCount(value.index) || !Array.isArray(value.results)) return null;
   const results = value.results.map(parseResult);
   if (results.some((result) => result === null) || results.length !== value.index) return null;
@@ -214,16 +248,8 @@ function parseActive(value: unknown): ActiveSession | null {
   return {
     id: value.id,
     setup,
-    // Обсяг і числа беремо з перевірених налаштувань, а не з файлу.
-    config: {
-      allowedSkills: config.allowedSkills,
-      focusSkills: config.focusSkills,
-      exampleCount: setup.exampleCount,
-      actionsPerExample: setup.actionsPerExample,
-      digits: setup.digits,
-      operations: setup.operations,
-      seed: config.seed,
-    },
+    // Приклади відтворюються з перевірених налаштувань і seed, а не з того, що записано у файлі.
+    config: { ...toDrillConfig(setup), seed: config.seed },
     started: value.started === true,
     index: value.index,
     results: results as ExampleResult[],
@@ -264,6 +290,12 @@ export function parseSave(value: unknown): SaveData | null {
       : [],
     // У старих збереженнях налаштування немає — звук увімкнено.
     sound: value.sound !== false,
+    cardLog: Array.isArray(value.cardLog)
+      ? value.cardLog
+          .map(parseCardRecord)
+          .filter((record): record is CardRecord => record !== null)
+          .slice(-CARD_LOG_LIMIT)
+      : [],
   };
 }
 

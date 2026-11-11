@@ -31,6 +31,7 @@ const sample = (): SaveData => ({
       withHelp: 1,
       failed: 1,
       partial: false,
+      review: false,
       earned: { stone: 7, grass: 3 },
       bonuses: [],
     },

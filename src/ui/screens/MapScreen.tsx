@@ -8,6 +8,8 @@ import {
   levelStates,
   recommendLesson,
 } from "../../game/curriculum/curriculum";
+import type { CardSetup } from "../../game/cards/types";
+import type { DailyPart } from "../../game/curriculum/daily";
 import type { Mastery } from "../../game/progress/progress";
 import { WEEK_GOAL } from "../../game/rewards/rewards";
 import { type LessonSetup, mentalTryout } from "../../game/session/setup";
@@ -77,8 +79,40 @@ interface Props {
   unlockAll: boolean;
   /** Скільки днів цього тижня вже були заняття. */
   weekDays: number;
+  /** План «Заняття на сьогодні». */
+  plan: DailyPart[];
   onStart: (setup: LessonSetup) => void;
+  onCards: (setup: CardSetup) => void;
   onCustomize: (skill: SkillId) => void;
+}
+
+/** Заняття на сьогодні: розминка, повторення старого й поточний рівень — по одній кнопці на частину. */
+function Daily({ plan, onStart, onCards }: Pick<Props, "plan" | "onStart" | "onCards">) {
+  const allDone = plan.every((part) => part.done);
+  const next = plan.find((part) => !part.done);
+  return (
+    <section className="daily">
+      <h2>{allDone ? "На сьогодні все зроблено! 🎉" : "Заняття на сьогодні"}</h2>
+      <ol className="daily-list">
+        {plan.map((part) => (
+          <li key={part.id} className={`daily-part${part.done ? " daily-done" : ""}`}>
+            <span className="daily-mark">{part.done ? "✅" : part === next ? "▶" : "•"}</span>
+            <div className="daily-text">
+              <b>{part.title}</b>
+              <span>{part.detail}</span>
+            </div>
+            <button
+              className={`btn${part === next ? "" : " btn-quiet"}`}
+              onClick={() => (part.id === "cards" ? onCards(part.cards) : onStart(part.lesson))}
+            >
+              {part.done ? "Ще раз" : "Почати"}
+            </button>
+          </li>
+        ))}
+      </ol>
+      {allDone && <p className="note">Можна будувати острів або потренуватися ще — за бажанням.</p>}
+    </section>
+  );
 }
 
 /** Вогнище показує накопичену активність тижня; пропущений день його не гасить. */
@@ -102,7 +136,7 @@ function Campfire({ days }: { days: number }) {
   );
 }
 
-export function MapScreen({ skills, unlockAll, weekDays, onStart, onCustomize }: Props) {
+export function MapScreen({ skills, unlockAll, weekDays, plan, onStart, onCards, onCustomize }: Props) {
   const states = useMemo(() => levelStates(skills, unlockAll), [skills, unlockAll]);
   const byskill = useMemo(() => new Map(states.map((state) => [state.skill, state])), [states]);
   const current = currentLevel(states);
@@ -113,6 +147,7 @@ export function MapScreen({ skills, unlockAll, weekDays, onStart, onCustomize }:
     <div className="map">
       <Companion event="greet" variant={new Date().getDate()} />
       <Campfire days={weekDays} />
+      <Daily plan={plan} onStart={onStart} onCards={onCards} />
       {WORLDS.map((world) => {
         const levels = world.levels.map((skill) => byskill.get(skill)!);
         const done = levels.filter((level) => level.status === "mastered").length;

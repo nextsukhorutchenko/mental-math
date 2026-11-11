@@ -72,7 +72,7 @@ export function BackupPanel({ save, onReplace, onExported }: Props) {
                 <span>{formatDate(record.finishedAt)}</span>
                 <span>
                   {record.mode === "mental" ? "🧠" : "🧮"}{" "}
-                  {record.topic === "simple" ? "Прямі рухи" : describeSkill(record.topic)}
+                  {record.review ? "Повторення" : record.topic === "simple" ? "Прямі рухи" : describeSkill(record.topic)}
                 </span>
                 <b>
                   {record.clean} з {record.total}

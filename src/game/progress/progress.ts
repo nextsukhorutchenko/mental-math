@@ -26,8 +26,35 @@ export function localDay(date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Через скільки днів повторювати засвоєний прийом: після кожного вдалого повторення інтервал росте. */
+export const REVIEW_INTERVALS = [3, 7, 21] as const;
+/** Скільки застосувань за заняття вважаємо справжньою практикою прийому. */
+export const REVIEW_MIN_USES = 3;
+
+export function daysBetween(from: string, to: string): number {
+  const day = (text: string) => {
+    const [year, month, date] = text.split("-").map(Number);
+    return new Date(year!, month! - 1, date!).getTime();
+  };
+  return Math.round((day(to) - day(from)) / 86_400_000);
+}
+
+/** День останньої справжньої практики прийому (або останній день із самостійними застосуваннями). */
+export function lastPractice(progress: ModeProgress | undefined): string | null {
+  return progress?.reviewed ?? progress?.days[progress.days.length - 1] ?? null;
+}
+
+/** Скільки днів минуло понад інтервал повторення; від'ємне — ще рано. */
+export function overdueDays(progress: ModeProgress | undefined, today: string): number {
+  const last = lastPractice(progress);
+  if (!last) return -Infinity;
+  const stage = Math.min(progress?.stage ?? 0, REVIEW_INTERVALS.length - 1);
+  return daysBetween(last, today) - REVIEW_INTERVALS[stage]!;
+}
+
 export function recordUse(progress: ModeProgress, clean: boolean, day: string): ModeProgress {
   return {
+    ...progress,
     correct: progress.correct + (clean ? 1 : 0),
     total: progress.total + 1,
     recent: [...progress.recent, clean].slice(-RECENT_LIMIT),
@@ -75,7 +102,17 @@ export interface Credit {
   topic: SkillId;
   mode: Mode;
   partial: boolean;
+  /** Заняття було повторенням раніше засвоєних прийомів. */
+  review?: boolean;
   session: Session;
+}
+
+/** Тижнева ціль: видається один раз на тиждень, коли набралося потрібно днів із заняттями чи картками. */
+export function weekGoal(save: SaveData, now: Date): { paid: boolean; weekGoalsPaid: string[] } {
+  const week = weekId(now);
+  const reached = weekActiveDays([...save.history, ...save.cardLog], now) >= WEEK_GOAL;
+  if (save.weekGoalsPaid.includes(week) || !reached) return { paid: false, weekGoalsPaid: save.weekGoalsPaid };
+  return { paid: true, weekGoalsPaid: [...save.weekGoalsPaid, week] };
 }
 
 /**
@@ -89,11 +126,28 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
 
   const day = localDay(credit.finishedAt);
   const skills = { ...save.skills };
-  const touched = new Set<SkillId>();
+  const counts = new Map<SkillId, { uses: number; clean: number }>();
   for (const use of skillUses(credit.session)) {
     const current = skills[use.skill] ?? { physical: emptyMode(), mental: emptyMode() };
     skills[use.skill] = { ...current, [credit.mode]: recordUse(current[credit.mode], use.clean, day) };
-    touched.add(use.skill);
+    const count = counts.get(use.skill) ?? { uses: 0, clean: 0 };
+    count.uses++;
+    if (use.clean) count.clean++;
+    counts.set(use.skill, count);
+  }
+  const touched = new Set(counts.keys());
+
+  // Повторення: якщо засвоєний прийом настав час повторити і його справді потренували,
+  // вдале повторення подовжує інтервал, невдале повертає до найкоротшого.
+  for (const [skill, count] of counts) {
+    if (count.uses < REVIEW_MIN_USES) continue;
+    const before = save.skills[skill]?.[credit.mode];
+    let stage = before?.stage ?? 0;
+    if (masteryOf(before, credit.mode).status === "mastered" && overdueDays(before, day) >= 0) {
+      stage = count.clean / count.uses >= 0.8 ? Math.min(stage + 1, REVIEW_INTERVALS.length - 1) : 0;
+    }
+    const current = skills[skill]!;
+    skills[skill] = { ...current, [credit.mode]: { ...current[credit.mode], reviewed: day, stage } };
   }
 
   // Нагороди нараховуються тим самим записом, що й прогрес, тому теж не дублюються.
@@ -121,21 +175,18 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
     withHelp,
     failed,
     partial: credit.partial,
+    review: credit.review === true,
     earned: loot,
     bonuses,
   };
-  const history = [...save.history, record].slice(-HISTORY_LIMIT);
+  const next: SaveData = { ...save, skills, history: [...save.history, record].slice(-HISTORY_LIMIT) };
 
-  // Тижнева ціль: видається один раз на тиждень, коли набралося потрібно днів із заняттями.
-  const week = weekId(credit.finishedAt);
-  let weekGoalsPaid = save.weekGoalsPaid;
-  if (!weekGoalsPaid.includes(week) && weekActiveDays(history, credit.finishedAt) >= WEEK_GOAL) {
-    weekGoalsPaid = [...weekGoalsPaid, week];
+  const week = weekGoal(next, credit.finishedAt);
+  if (week.paid) {
     bonuses.push("week");
     addLoot(loot, "crystal", REWARDS.week);
   }
-
-  return { ...save, skills, history, inventory: withLoot(save.inventory, loot), weekGoalsPaid };
+  return { ...next, inventory: withLoot(save.inventory, loot), weekGoalsPaid: week.weekGoalsPaid };
 }
 
 /** Відтворює незавершене заняття: ті самі приклади з того самого seed. */
@@ -161,6 +212,7 @@ export function closeActive(save: SaveData, now: Date): SaveData {
         topic: active.setup.topic,
         mode: active.setup.mode,
         partial: true,
+        review: !!active.setup.review,
         session,
       })
     : save;

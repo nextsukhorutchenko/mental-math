@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { GeneratorError, generateDrill } from "../core/generator/generator";
 import type { SkillId } from "../core/rules/skills";
+import { creditCards } from "../game/cards/cards";
+import { type CardSetup, DEFAULT_CARDS } from "../game/cards/types";
+import { dailyPlan } from "../game/curriculum/daily";
 import { closeActive, creditSession, restoreSession } from "../game/progress/progress";
 import type { Bonus, Loot } from "../game/rewards/blocks";
 import { weekActiveDays } from "../game/rewards/rewards";
@@ -8,6 +11,7 @@ import type { Session } from "../game/session/session";
 import { type LessonSetup, mentalTryout, toDrillConfig } from "../game/session/setup";
 import { browserStore, loadSave, writeSave } from "../storage/localStore";
 import type { SaveData } from "../storage/save";
+import { CardsScreen } from "./screens/CardsScreen";
 import { IslandScreen } from "./screens/IslandScreen";
 import { LessonScreen, Summary } from "./screens/LessonScreen";
 import { MapScreen } from "./screens/MapScreen";
@@ -16,7 +20,7 @@ import { SetupScreen } from "./screens/SetupScreen";
 import { registerServiceWorker } from "./pwa";
 import { playSound, setSoundEnabled } from "./sound";
 
-type Tab = "map" | "island" | "trainer" | "parents";
+type Tab = "map" | "cards" | "island" | "trainer" | "parents";
 type Screen = Tab | "lesson" | "summary";
 
 interface Finished {
@@ -28,6 +32,7 @@ interface Finished {
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "map", label: "🗺 Карта" },
+  { id: "cards", label: "🃏 Картки" },
   { id: "island", label: "🏝 Острів" },
   { id: "trainer", label: "🎯 Тренажер" },
   { id: "parents", label: "👪 Для батьків" },
@@ -42,6 +47,8 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
   /** Тема, з якою тренажер відкрили з картки рівня. */
   const [presetTopic, setPresetTopic] = useState<SkillId | null>(null);
+  /** Набір карток, запущений із плану дня: стартує одразу; key перезапускає екран. */
+  const [cardsRun, setCardsRun] = useState<{ setup: CardSetup; key: number } | null>(null);
 
   // Кожна зміна прогресу одразу пишеться в сховище; невдачу показуємо батькам.
   useEffect(() => {
@@ -84,7 +91,8 @@ export function App() {
           id,
           setup,
           config: { ...drill.config, seed: drill.seed },
-          started: false,
+          // Повторення — це вже знайомі прийоми, пояснення теми для нього не показуємо.
+          started: !!setup.review,
           index: 0,
           results: [],
           current: { answers: [], solved: false, hintUsed: false },
@@ -105,7 +113,15 @@ export function App() {
     if (!active) return;
     const { id, setup } = active;
     if (next.status === "finished") {
-      const credit = { id, finishedAt: new Date(), topic: setup.topic, mode: setup.mode, partial: false, session: next };
+      const credit = {
+        id,
+        finishedAt: new Date(),
+        topic: setup.topic,
+        mode: setup.mode,
+        partial: false,
+        review: !!setup.review,
+        session: next,
+      };
       // Зарахування, нагороди й закриття заняття — один запис; повтор із тим самим id нічого не змінить.
       setSave((current) => ({
         ...creditSession(current, credit),
@@ -127,17 +143,25 @@ export function App() {
     );
   };
 
+  const finishCards = (setup: CardSetup, results: boolean[]): Loot => {
+    const now = new Date();
+    const credit = { id: `cards-${now.getTime()}`, finishedAt: now, setup, results };
+    setSave((current) => creditCards(current, credit));
+    return creditCards(save, credit).cardLog.find((record) => record.id === credit.id)?.earned ?? {};
+  };
+
   const markStarted = () =>
     setSave((current) => (current.active ? { ...current, active: { ...current.active, started: true } } : current));
 
   const openTab = (tab: Tab) => {
     if (tab !== "trainer") setPresetTopic(null);
+    if (tab === "cards") setCardsRun(null);
     setScreen(tab);
   };
 
   const inLesson = screen === "lesson" && active && session;
   const inSummary = screen === "summary" && finished;
-  const tab: Tab = screen === "trainer" || screen === "parents" || screen === "island" ? screen : "map";
+  const tab: Tab = screen === "lesson" || screen === "summary" ? "map" : screen;
   const trainerSetup = presetTopic ? { ...save.setup, topic: presetTopic } : save.setup;
 
   return (
@@ -223,6 +247,7 @@ export function App() {
           <Summary
             session={finished.session}
             topic={finished.setup.topic}
+            review={finished.setup.review}
             mode={finished.setup.mode}
             earned={finished.earned}
             bonuses={finished.bonuses}
@@ -238,6 +263,14 @@ export function App() {
             active={session ? active : null}
             error={error}
             onStart={(setup) => start(setup, true)}
+          />
+        ) : tab === "cards" ? (
+          <CardsScreen
+            key={cardsRun?.key ?? 0}
+            initial={cardsRun?.setup ?? DEFAULT_CARDS}
+            autostart={cardsRun !== null}
+            onFinish={finishCards}
+            onExit={() => setScreen("map")}
           />
         ) : tab === "island" ? (
           <IslandScreen
@@ -255,7 +288,12 @@ export function App() {
           <MapScreen
             skills={save.skills}
             unlockAll={save.unlockAll}
-            weekDays={weekActiveDays(save.history, new Date())}
+            weekDays={weekActiveDays([...save.history, ...save.cardLog], new Date())}
+            plan={dailyPlan(save, new Date())}
+            onCards={(setup) => {
+              setCardsRun({ setup, key: Date.now() });
+              setScreen("cards");
+            }}
             onStart={(setup) => start(setup, false)}
             onCustomize={(skill) => {
               setPresetTopic(skill);

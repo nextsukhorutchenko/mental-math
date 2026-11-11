@@ -85,6 +85,7 @@ describe("статистика для батьків", () => {
     withHelp: total - clean,
     failed: 0,
     partial: false,
+    review: false,
     earned: {},
     bonuses: [],
   });

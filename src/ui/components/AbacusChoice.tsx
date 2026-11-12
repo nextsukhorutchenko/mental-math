@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { PlayerContext } from "../player";
+import { Modal } from "./Modal";
 
 /** Скільки секунд кнопка у верхній панелі світиться, щоб її помітили. */
 export const ATTENTION_SECONDS = 7;
@@ -58,5 +59,34 @@ export function AbacusChoice() {
         📱 Абакус на екрані
       </button>
     </div>
+  );
+}
+
+/**
+ * Питання при першому вході: є вдома справжній абакус чи рахуємо на екранному.
+ * Закриття без вибору лишає справжній абакус — основний шлях навчання.
+ */
+export function AbacusWelcome({ onPick }: { onPick: (screenAbacus: boolean) => void }) {
+  return (
+    <Modal title="Чим будемо рахувати?" onClose={() => onPick(false)}>
+      <p className="lead">Скажи, чи є в тебе вдома абакус. Від цього залежить, як підуть заняття.</p>
+      <div className="abacus-cards">
+        <button className="abacus-card abacus-card-main" onClick={() => onPick(false)}>
+          <span className="abacus-card-icon" aria-hidden="true">
+            🧮
+          </span>
+          <b>Є абакус</b>
+          <span>Рахую на справжньому соробані пальцями — так найкраще.</span>
+        </button>
+        <button className="abacus-card" onClick={() => onPick(true)}>
+          <span className="abacus-card-icon" aria-hidden="true">
+            📱
+          </span>
+          <b>Без абакуса</b>
+          <span>Пересуваю кісточки на екрані дотиком.</span>
+        </button>
+      </div>
+      <p className="note">Передумаєш — перемкни кнопкою «🧮 Є абакус» угорі екрана.</p>
+    </Modal>
   );
 }

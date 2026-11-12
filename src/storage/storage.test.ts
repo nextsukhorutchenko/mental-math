@@ -14,6 +14,7 @@ function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { da
 
 const sample = (): SaveData => ({
   ...emptySave(),
+  abacusAsked: true,
   skills: {
     "five:+4": {
       physical: { correct: 3, total: 4, recent: [true, true, false, true], days: ["2026-11-11"] },
@@ -111,6 +112,15 @@ describe("збереження в браузері", () => {
 });
 
 describe("перевірка даних", () => {
+  it("питання про абакус — лише для нових; хто вже займався, того не питаємо", () => {
+    expect(emptySave().abacusAsked).toBe(false);
+    const { abacusAsked: _asked, ...fresh } = emptySave();
+    expect(parseSave(fresh)!.abacusAsked).toBe(false);
+    const { abacusAsked: _old, ...veteran } = sample();
+    expect(parseSave(JSON.parse(JSON.stringify(veteran)))!.abacusAsked).toBe(true);
+    expect(parseSave({ ...fresh, abacusAsked: true })!.abacusAsked).toBe(true);
+  });
+
   it("відхиляє чуже й стару версію", () => {
     expect(parseSave(null)).toBeNull();
     expect(parseSave({ version: 2, skills: {}, history: [] })).toBeNull();

@@ -588,6 +588,54 @@ body {
   background: #2e3750;
 }
 
+/* Питання при першому вході: два великі блоки на вибір. */
+.abacus-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin: 16px 0 12px;
+}
+
+.abacus-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 14px 16px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.35;
+  text-align: center;
+  color: #e8e4f0;
+  background: #232a3a;
+  border: var(--block) solid var(--stone-edge);
+  box-shadow: inset 0 -6px 0 rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+}
+
+.abacus-card b {
+  font-size: 22px;
+  color: #fff;
+}
+
+.abacus-card-icon {
+  font-size: 56px;
+  line-height: 1;
+  filter: drop-shadow(3px 3px 0 rgba(0, 0, 0, 0.35));
+}
+
+.abacus-card:hover,
+.abacus-card:focus-visible {
+  background: #2e3750;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px var(--gold), inset 0 -6px 0 rgba(0, 0, 0, 0.3);
+  outline: none;
+}
+
+.abacus-card-main b {
+  color: var(--gold);
+}
+
 .skin-card-active {
   background: #343e56;
   border-color: var(--gold);

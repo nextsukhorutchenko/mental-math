@@ -24,7 +24,7 @@ import {
 import { type Player, PlayerBadge, PlayerContext, SkinPicker } from "./components/Avatar";
 import { Backdrop } from "./components/Backdrop";
 import { PetPicker } from "./components/Companion";
-import { AbacusToggle } from "./components/AbacusChoice";
+import { AbacusToggle, AbacusWelcome } from "./components/AbacusChoice";
 import { claimQuests } from "../game/island/quests";
 import { CardsScreen } from "./screens/CardsScreen";
 import { CertificateScreen } from "./screens/CertificateScreen";
@@ -297,6 +297,9 @@ export function App() {
         }}
         onClose={() => setPickingPet(false)}
       />
+    )}
+    {!save.abacusAsked && !inLesson && !inOverlay && !pickingSkin && !pickingPet && (
+      <AbacusWelcome onPick={(screenAbacus) => setSave((current) => ({ ...current, screenAbacus, abacusAsked: true }))} />
     )}
     <div className="app">
       {holiday && !inLesson && (

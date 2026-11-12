@@ -130,6 +130,8 @@ export interface SaveData {
   questsDone: string[];
   /** Справжнього абакуса немає: рахувати на екранному. */
   screenAbacus: boolean;
+  /** Чи вже питали при першому вході, є вдома абакус чи ні. */
+  abacusAsked: boolean;
 }
 
 export const CARD_LOG_LIMIT = 300;
@@ -167,6 +169,7 @@ export function emptySave(): SaveData {
     skin: DEFAULT_SKIN,
     pet: DEFAULT_PET,
     questsDone: [],
+    abacusAsked: false,
     screenAbacus: false,
   };
 }
@@ -408,6 +411,9 @@ export function parseSave(value: unknown): SaveData | null {
       ? [...new Set(value.questsDone.filter((id): id is string => typeof id === "string"))].slice(0, 100)
       : [],
     screenAbacus: value.screenAbacus === true,
+    // Хто вже займався до появи цього питання, той абакус обрав — не питаємо вдруге.
+    abacusAsked:
+      value.abacusAsked === true || value.screenAbacus === true || history.length > 0 || Object.keys(skills).length > 0,
     cardLog: Array.isArray(value.cardLog)
       ? value.cardLog
           .map(parseCardRecord)

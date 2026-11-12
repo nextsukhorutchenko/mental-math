@@ -1,9 +1,9 @@
 import { ALL_SKILLS, type SkillId, skillFamily } from "../../core/rules/skills";
-import type { SaveData } from "../../storage/save";
+import type { SaveData, SessionRecord } from "../../storage/save";
 import { type CardSetup, DEFAULT_CARDS } from "../cards/types";
 import { localDay, masteryOf, overdueDays } from "../progress/progress";
-import { DEFAULT_SETUP, type LessonSetup } from "../session/setup";
-import { currentLevel, hasActions, levelLabel, levelStates, recommendLesson } from "./curriculum";
+import { DEFAULT_SETUP, type LessonSetup, type PlanTask } from "../session/setup";
+import { type LevelState, currentLevel, fullLessonSize, hasActions, levelLabel, levelStates, recommendLesson } from "./curriculum";
 
 /** Скільки прийомів повторюємо за одне заняття: більше — і на кожен припаде замало дій. */
 export const REVIEW_LIMIT = 3;
@@ -35,9 +35,27 @@ export function reviewSetup(skills: SkillId[]): LessonSetup {
 
 export type DailyPart =
   | { id: "cards"; title: string; detail: string; done: boolean; cards: CardSetup }
-  | { id: "review" | "level"; title: string; detail: string; done: boolean; lesson: LessonSetup };
+  | { id: "review" | PlanTask; title: string; detail: string; done: boolean; lesson: LessonSetup };
 
 const actionsWord = (count: number) => (count <= 4 ? "дії" : "дій");
+
+/** Скільки прикладів подумки щодня: коротко, щоб план лишався посильним. */
+export const DAILY_MENTAL_EXAMPLES = 5;
+
+/**
+ * Чи закриває запис пункт плану: заняття, запущене з цього пункту, або власноруч обране
+ * таке саме — той самий рівень і режим, не перерване й повного обсягу. Обсяг звіряємо з найменшим
+ * повним заняттям рівня: після заняття рекомендація може перейти на наступний етап із більшим обсягом.
+ */
+function fulfils(record: SessionRecord, task: PlanTask, state: LevelState, lesson: LessonSetup): boolean {
+  if (record.partial || record.review) return false;
+  if (record.planned === task) return true;
+  const enough = Math.min(lesson.exampleCount, fullLessonSize(state.level.kind));
+  return record.level === lesson.level && record.mode === lesson.mode && record.total >= enough;
+}
+
+const describeLesson = (state: LevelState, setup: LessonSetup) =>
+  `${setup.exampleCount} прикладів${hasActions(state.level) ? ` по ${setup.actionsPerExample} ${actionsWord(setup.actionsPerExample)}` : ""}`;
 
 /**
  * План «Заняття на сьогодні»: розминка картками, повторення старого (якщо настав час) і поточний рівень.
@@ -94,12 +112,35 @@ export function dailyPlan(save: SaveData, now: Date): DailyPart[] {
   const current = currentLevel(states);
   const state = states.find((item) => item.id === current) ?? states[states.length - 1]!;
   const next = recommendLesson(state);
+  const levelLesson: LessonSetup = { ...next.setup, planned: "level" };
   parts.push({
     id: "level",
     title: `Рівень ${state.level.label}: ${next.title.toLowerCase()}`,
-    detail: `${next.setup.exampleCount} прикладів${hasActions(state.level) ? ` по ${next.setup.actionsPerExample} ${actionsWord(next.setup.actionsPerExample)}` : ""}${next.setup.mode === "mental" ? ", подумки" : ""}`,
-    done: lessonsToday.some((record) => !record.review && !record.partial),
-    lesson: next.setup,
+    detail: `${describeLesson(state, levelLesson)}${levelLesson.mode === "mental" ? ", подумки" : ""}`,
+    done: lessonsToday.some((record) => fulfils(record, "level", state, levelLesson)),
+    lesson: levelLesson,
   });
+
+  // Рахунок подумки: після засвоєння на абакусі програма йде далі, тож уявний абакус тренуємо окремим пунктом —
+  // на найновішому рівні, який уже засвоєно руками, але ще не подумки.
+  const mentalState = [...states]
+    .reverse()
+    .find((item) => item.status === "mastered" && item.mental.status !== "mastered");
+  if (mentalState && levelLesson.mode !== "mental") {
+    const recommended = recommendLesson(mentalState).setup;
+    const lesson: LessonSetup = {
+      ...recommended,
+      mode: "mental",
+      exampleCount: Math.min(recommended.exampleCount, DAILY_MENTAL_EXAMPLES),
+      planned: "mental",
+    };
+    parts.push({
+      id: "mental",
+      title: `Подумки: рівень ${mentalState.level.label}`,
+      detail: `${describeLesson(mentalState, lesson)} — абакус відкласти`,
+      done: lessonsToday.some((record) => fulfils(record, "mental", mentalState, lesson)),
+      lesson,
+    });
+  }
   return parts;
 }

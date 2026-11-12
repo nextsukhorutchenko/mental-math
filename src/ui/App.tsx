@@ -7,11 +7,11 @@ import { earnedRanks, levelStates } from "../game/curriculum/curriculum";
 import { dailyPlan } from "../game/curriculum/daily";
 import { creditFlash } from "../game/flash/flash";
 import { closeActive, creditSession, restoreSession } from "../game/progress/progress";
-import type { Bonus, Loot } from "../game/rewards/blocks";
+import type { Loot } from "../game/rewards/blocks";
 import { weekActiveDays } from "../game/rewards/rewards";
 import type { Session } from "../game/session/session";
 import { type LessonSetup, mentalTryout, toDrillConfig } from "../game/session/setup";
-import { browserStore, loadSave, writeSave } from "../storage/localStore";
+import { SAVE_KEY, browserStore, loadSave, parseStoredText, writeSave } from "../storage/localStore";
 import { DEFAULT_CHILD_NAME, type SaveData } from "../storage/save";
 import {
   HOLIDAYS,
@@ -35,6 +35,7 @@ import { LessonScreen, Summary } from "./screens/LessonScreen";
 import { MapScreen } from "./screens/MapScreen";
 import { ParentsScreen } from "./screens/ParentsScreen";
 import { PlacementScreen } from "./screens/PlacementScreen";
+import { download } from "./screens/BackupPanel";
 import { SetupScreen } from "./screens/SetupScreen";
 import { registerServiceWorker } from "./pwa";
 import { playSound, setSoundEnabled } from "./sound";
@@ -43,10 +44,10 @@ type Tab = "map" | "cards" | "island" | "trainer" | "parents";
 type Screen = Tab | "lesson" | "summary" | "placement" | "soroban" | "flash" | "certificate";
 
 interface Finished {
+  /** Id запису в історії: нагороди для підсумку беруться саме з нього, а не перераховуються. */
+  id: string;
   session: Session;
   setup: LessonSetup;
-  earned: Loot;
-  bonuses: Bonus[];
 }
 
 const TABS: { id: Tab; label: string }[] = [
@@ -61,6 +62,8 @@ export function App() {
   const [loaded] = useState(() => loadSave(browserStore()));
   const [save, setSave] = useState<SaveData>(loaded.data);
   const [saveFailed, setSaveFailed] = useState(false);
+  /** Збережене не вдалося прочитати й відкласти: поки батьки не вирішать, поверх нього не пишемо. */
+  const [locked, setLocked] = useState(loaded.locked);
   const [screen, setScreen] = useState<Screen>("map");
   const [finished, setFinished] = useState<Finished | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,8 +79,28 @@ export function App() {
 
   // Кожна зміна прогресу одразу пишеться в сховище; невдачу показуємо батькам.
   useEffect(() => {
+    if (locked) return;
     setSaveFailed(!writeSave(browserStore(), save));
-  }, [save]);
+  }, [save, locked]);
+
+  // Застосунок відкрито ще в одній вкладці: беремо її свіжий стан, щоб не затерти його своїм старим.
+  useEffect(() => {
+    const adopt = (event: StorageEvent) => {
+      if (event.key !== SAVE_KEY) return;
+      const fresh = parseStoredText(event.newValue);
+      if (!fresh) return;
+      setSave(fresh);
+      setLocked(false);
+    };
+    window.addEventListener("storage", adopt);
+    return () => window.removeEventListener("storage", adopt);
+  }, []);
+
+  /** Прогрес замінено свідомо (копія з файлу чи чистий аркуш): автозбереження знову можна вмикати. */
+  const replaceSave = (next: SaveData) => {
+    setSave(next);
+    setLocked(false);
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -173,6 +196,7 @@ export function App() {
         partial: false,
         review: !!setup.review,
         level: setup.level,
+        planned: setup.planned,
         pacing: setup.pacing,
         session: next,
       };
@@ -181,8 +205,7 @@ export function App() {
         ...creditSession(current, credit),
         active: current.active?.id === id ? null : current.active,
       }));
-      const record = creditSession(save, credit).history.find((item) => item.id === id);
-      setFinished({ session: next, setup, earned: record?.earned ?? {}, bonuses: record?.bonuses ?? [] });
+      setFinished({ id, session: next, setup });
       playSound("finish");
       setScreen("summary");
       // Просимо браузер не видаляти дані застосунку без потреби.
@@ -220,6 +243,8 @@ export function App() {
 
   const inLesson = screen === "lesson" && active && session;
   const inSummary = screen === "summary" && finished;
+  // Підсумок показує рівно те, що записано в історію, — без окремого перерахунку.
+  const finishedRecord = finished ? save.history.find((record) => record.id === finished.id) : undefined;
   const inPlacement = screen === "placement";
   // Екрани на весь застосунок: без вкладок і банерів.
   const inOverlay = inPlacement || screen === "soroban" || screen === "flash" || screen === "certificate";
@@ -316,7 +341,27 @@ export function App() {
         </div>
       )}
 
-      {loaded.warning && <p className="banner banner-error">{loaded.warning}</p>}
+      {loaded.warning && (locked || !loaded.locked) && <p className="banner banner-error">{loaded.warning}</p>}
+      {locked && (
+        <div className="banner banner-error">
+          {loaded.raw !== null && (
+            <button className="btn" onClick={() => download("mental-math-unreadable.txt", loaded.raw!)}>
+              ⬇ Вивантажити вихідні дані
+            </button>
+          )}
+          <button className="btn" onClick={() => openTab("parents")}>
+            Відновити з копії
+          </button>
+          <button
+            className="btn btn-quiet"
+            onClick={() => {
+              if (window.confirm("Почати з чистого аркуша? Старі дані в цьому браузері буде затерто.")) setLocked(false);
+            }}
+          >
+            Почати з чистого аркуша
+          </button>
+        </div>
+      )}
       {saveFailed && !loaded.warning && (
         <p className="banner banner-error">
           Не вдалося зберегти прогрес у браузері. Збережіть резервну копію у файл, щоб нічого не втратити.
@@ -365,8 +410,8 @@ export function App() {
             topic={finished.setup.topic}
             review={finished.setup.review}
             mode={finished.setup.mode}
-            earned={finished.earned}
-            bonuses={finished.bonuses}
+            earned={finishedRecord?.earned ?? {}}
+            bonuses={finishedRecord?.bonuses ?? []}
             onRepeat={() => start(finished.setup, false)}
             onMentalTry={() => start(mentalTryout(finished.setup), false)}
             onExit={() => setScreen("map")}
@@ -426,7 +471,7 @@ export function App() {
         ) : tab === "parents" ? (
           <ParentsScreen
             save={save}
-            onReplace={setSave}
+            onReplace={replaceSave}
             onExported={(at) => setSave((current) => ({ ...current, lastExportAt: at }))}
             onUnlockAll={(unlockAll) => setSave((current) => ({ ...current, unlockAll }))}
             ranks={ranks}

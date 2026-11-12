@@ -6,7 +6,7 @@ import { creditCards, generateCards } from "../cards/cards";
 import { DEFAULT_CARDS, cardSpan } from "../cards/types";
 import { creditSession, daysBetween, overdueDays, recordUse } from "../progress/progress";
 import { type Session, nextExample, startSession, submitAnswer } from "../session/session";
-import { toDrillConfig } from "../session/setup";
+import { type LessonSetup, toDrillConfig } from "../session/setup";
 import { dailyPlan, dueReviews, reviewSetup } from "./daily";
 
 function mastered(lastDay: string, extra: Partial<ModeProgress> = {}): ModeProgress {
@@ -25,6 +25,18 @@ function play(setupSkills: SkillId[], how: "ok" | "bad", seed = 3): Session {
   drill.examples.forEach((example) => {
     if (how === "bad") session = submitAnswer(session, example.answer + 1);
     session = nextExample(submitAnswer(session, example.answer));
+  });
+  return session;
+}
+
+/** Грає заняття з цими налаштуваннями: усе правильно або один приклад із двома помилками. */
+function playSetup(setup: LessonSetup, how: "ok" | "fail" = "ok", seed = 3): Session {
+  const drill = generateDrill({ ...toDrillConfig(setup), seed });
+  let session = startSession(drill);
+  drill.examples.forEach((example) => {
+    if (how === "fail") session = submitAnswer(submitAnswer(session, example.answer + 1), example.answer + 2);
+    else session = submitAnswer(session, example.answer);
+    session = nextExample(session);
   });
   return session;
 }
@@ -206,7 +218,7 @@ describe("заняття на сьогодні", () => {
       "ten:+9": skill(recordUse(emptyMode(), true, "2026-11-10")),
     });
     const plan = dailyPlan(save, now);
-    expect(plan.map((part) => part.id)).toEqual(["cards", "review", "level"]);
+    expect(plan.map((part) => part.id)).toEqual(["cards", "review", "level", "mental"]);
     expect(plan[0]).toMatchObject({ cards: { digits: 2 } });
     expect(plan[1]).toMatchObject({ done: false, lesson: { review: ["simple"], topic: "simple" } });
     // «1–4» і «5–9» не займані, але після них уже засвоєно інші рівні — тож вони не повертають назад.
@@ -230,8 +242,78 @@ describe("заняття на сьогодні", () => {
       ["cards", true],
       ["review", true],
       ["level", false],
+      ["mental", false],
     ]);
     // Учорашні записи сьогодні не рахуються.
     expect(dailyPlan(save, new Date(2026, 10, 12, 9)).every((part) => !part.done)).toBe(true);
+  });
+
+  it("пункт рівня закриває саме заплановане заняття, а не будь-яке", () => {
+    const save = emptySave();
+    const level = dailyPlan(save, now).find((part) => part.id === "level")!;
+    if (level.id === "cards") throw new Error("unreachable");
+    expect(level.lesson.planned).toBe("level");
+
+    // Один невдалий приклад з іншої теми у вільному тренажері — не те, що заплановано.
+    const other: LessonSetup = { ...level.lesson, topic: "ten:+9", level: undefined, planned: undefined, exampleCount: 1 };
+    const stray = creditSession(save, {
+      id: "x",
+      finishedAt: now,
+      topic: other.topic,
+      mode: "physical",
+      partial: false,
+      session: playSetup(other, "fail"),
+    });
+    expect(dailyPlan(stray, now).find((part) => part.id === "level")!.done).toBe(false);
+
+    // Той самий рівень і обсяг, обраний вручну, — зараховується.
+    const manual = { ...level.lesson, planned: undefined };
+    const same = creditSession(save, {
+      id: "m",
+      finishedAt: now,
+      topic: manual.topic,
+      mode: "physical",
+      partial: false,
+      level: manual.level,
+      session: playSetup(manual),
+    });
+    expect(dailyPlan(same, now).find((part) => part.id === "level")!.done).toBe(true);
+
+    // Запущене з плану зараховується, навіть якщо після нього рекомендація змінилася.
+    const planned = creditSession(save, {
+      id: "p",
+      finishedAt: now,
+      topic: level.lesson.topic,
+      mode: "physical",
+      partial: false,
+      level: level.lesson.level,
+      planned: "level",
+      session: playSetup({ ...level.lesson, exampleCount: 1 }),
+    });
+    expect(dailyPlan(planned, now).find((part) => part.id === "level")!.done).toBe(true);
+  });
+
+  it("додає коротку практику подумки для рівня, засвоєного руками", () => {
+    const save = withSkills({ "simple:low": skill(mastered("2026-11-10")) });
+    const mental = dailyPlan(save, now).find((part) => part.id === "mental");
+    expect(mental).toMatchObject({
+      done: false,
+      lesson: { level: "simple:low", mode: "mental", exampleCount: 5, planned: "mental" },
+    });
+    if (!mental || mental.id === "cards") throw new Error("немає пункту подумки");
+    const done = creditSession(save, {
+      id: "mm",
+      finishedAt: now,
+      topic: mental.lesson.topic,
+      mode: "mental",
+      partial: false,
+      level: mental.lesson.level,
+      planned: "mental",
+      session: playSetup(mental.lesson),
+    });
+    expect(dailyPlan(done, now).find((part) => part.id === "mental")!.done).toBe(true);
+    // Коли подумки теж засвоєно — пункту немає.
+    const both = withSkills({ "simple:low": { physical: mastered("2026-11-10"), mental: mastered("2026-11-10") } });
+    expect(dailyPlan(both, now).some((part) => part.id === "mental")).toBe(false);
   });
 });

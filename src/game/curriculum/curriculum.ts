@@ -90,6 +90,11 @@ const VOLUME: Record<Level["kind"], Record<Recommendation["stage"], [number, num
   divide: { intro: [10, 2], practice: [15, 2], mix: [20, 2], mental: [10, 2], review: [10, 2] },
 };
 
+/** Найменше повне заняття рівня цього виду за нормами програми (на будь-якому етапі). */
+export function fullLessonSize(kind: Level["kind"]): number {
+  return Math.min(...Object.values(VOLUME[kind]).map(([examples]) => examples));
+}
+
 const STAGE_TITLES: Record<Recommendation["stage"], string> = {
   intro: "Знайомство",
   practice: "Практика",

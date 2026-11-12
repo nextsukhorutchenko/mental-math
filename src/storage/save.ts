@@ -28,7 +28,9 @@ import {
   type LessonSetup,
   type Mode,
   PACINGS,
+  PLAN_TASKS,
   type Pacing,
+  type PlanTask,
   SETUP_LIMITS,
   toDrillConfig,
 } from "../game/session/setup";
@@ -66,6 +68,8 @@ export interface SessionRecord {
   review: boolean;
   /** Рівень карти, якщо заняття запущено з нього. */
   level?: string;
+  /** Пункт плану дня, з якого запущено заняття. */
+  planned?: PlanTask;
   /** Блоки, здобуті за це заняття. */
   earned: Loot;
   /** Особливі нагороди цього заняття. */
@@ -175,6 +179,7 @@ const isCount = (value: unknown): value is number => Number.isInteger(value) && 
 const isSkill = (value: unknown): value is SkillId => ALL_SKILLS.includes(value as SkillId);
 const isTrack = (value: unknown): value is string => TRACK_IDS.includes(value as string);
 const isLevel = (value: unknown): value is string => LEVEL_IDS.includes(value as string);
+const isPlanTask = (value: unknown): value is PlanTask => PLAN_TASKS.includes(value as PlanTask);
 const isMode = (value: unknown): value is Mode => value === "physical" || value === "mental";
 const isDate = (value: unknown): value is string => typeof value === "string" && !Number.isNaN(Date.parse(value));
 const isDay = (value: unknown): value is string => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -196,6 +201,7 @@ function parseSetup(value: unknown): LessonSetup | null {
   return {
     ...(review.length > 0 ? { review } : {}),
     ...(isLevel(value.level) ? { level: value.level } : {}),
+    ...(isPlanTask(value.planned) ? { planned: value.planned } : {}),
     topic: value.topic,
     exampleCount,
     actionsPerExample,
@@ -312,6 +318,7 @@ function parseRecord(value: unknown): SessionRecord | null {
     partial: value.partial === true,
     review: value.review === true,
     ...(isLevel(value.level) ? { level: value.level } : {}),
+    ...(isPlanTask(value.planned) ? { planned: value.planned } : {}),
     earned: parseLoot(value.earned),
     bonuses: Array.isArray(value.bonuses) ? value.bonuses.filter(isBonus) : [],
   };

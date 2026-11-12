@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DEFAULT_SETUP, toDrillConfig } from "../game/session/setup";
-import { CORRUPT_KEY, type KeyValueStore, SAVE_KEY, loadSave, writeSave } from "./localStore";
+import { CORRUPT_KEY, type KeyValueStore, SAVE_KEY, loadSave, parseStoredText, writeSave } from "./localStore";
 import { type SaveData, emptySave, parseExportText, parseSave, toExportText } from "./save";
 
 function memoryStore(initial: Record<string, string> = {}): KeyValueStore & { data: Map<string, string> } {
@@ -52,11 +52,11 @@ describe("збереження в браузері", () => {
   it("записує й читає ті самі дані", () => {
     const store = memoryStore();
     expect(writeSave(store, sample())).toBe(true);
-    expect(loadSave(store)).toEqual({ data: sample(), warning: null });
+    expect(loadSave(store)).toEqual({ data: sample(), warning: null, locked: false, raw: null });
   });
 
   it("порожнє сховище — чистий аркуш без попереджень", () => {
-    expect(loadSave(memoryStore())).toEqual({ data: emptySave(), warning: null });
+    expect(loadSave(memoryStore())).toEqual({ data: emptySave(), warning: null, locked: false, raw: null });
   });
 
   it("пошкоджені дані відкладає, а не затирає", () => {
@@ -65,6 +65,36 @@ describe("збереження в браузері", () => {
     expect(result.data).toEqual(emptySave());
     expect(result.warning).toMatch(/пошкоджено/);
     expect(store.data.get(CORRUPT_KEY)).toBe("{не json");
+    expect(result.locked).toBe(false);
+  });
+
+  it("якщо пошкоджене не вдалося відкласти — блокує перезапис і дає вихідний текст", () => {
+    const original = "{не json";
+    const store: KeyValueStore = {
+      getItem: (key) => (key === SAVE_KEY ? original : null),
+      setItem: () => {
+        throw new Error("QuotaExceededError");
+      },
+    };
+    const result = loadSave(store);
+    expect(result).toMatchObject({ locked: true, raw: original });
+    expect(result.warning).toMatch(/не зберігаються/);
+  });
+
+  it("якщо сховище не читається — теж не перезаписує", () => {
+    const store: KeyValueStore = {
+      getItem: () => {
+        throw new Error("SecurityError");
+      },
+      setItem: () => undefined,
+    };
+    expect(loadSave(store)).toMatchObject({ locked: true, raw: null });
+  });
+
+  it("розбирає текст іншої вкладки", () => {
+    expect(parseStoredText(JSON.stringify(sample()))).toEqual(sample());
+    expect(parseStoredText("{не json")).toBeNull();
+    expect(parseStoredText(null)).toBeNull();
   });
 
   it("повідомляє про невдалий запис і недоступне сховище", () => {

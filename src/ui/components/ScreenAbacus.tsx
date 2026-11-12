@@ -9,7 +9,8 @@ interface Props {
   rods: number;
   /** Що написати на кнопці відповіді. */
   submitLabel?: string;
-  onSubmit: (value: number) => void;
+  /** Без нього кнопки відповіді немає: абакус лише для рахунку, відповідь вводиться окремо. */
+  onSubmit?: (value: number) => void;
   /** Кісточки зберігаються після хибної відповіді, щоб їх можна було виправити. */
   initial?: Abacus;
   onChange?: (abacus: Abacus) => void;
@@ -41,9 +42,11 @@ export function ScreenAbacus({ rods, submitLabel = "Готово ✓", onSubmit,
         onTouch={(rod, bead) => setAbacus((current) => touchBead(current, rod, bead))}
       />
       <div className="row">
-        <button className="btn btn-big" onClick={() => onSubmit(toNumber(abacus))}>
-          {submitLabel}
-        </button>
+        {onSubmit && (
+          <button className="btn btn-big" onClick={() => onSubmit(toNumber(abacus))}>
+            {submitLabel}
+          </button>
+        )}
         <button className="btn btn-quiet" onClick={() => setAbacus(fromNumber(0, rods))}>
           🧹 Скинути
         </button>

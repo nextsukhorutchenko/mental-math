@@ -23,7 +23,8 @@ import {
   withLoot,
 } from "../rewards/rewards";
 import { levelById } from "../curriculum/levels";
-import { type Session, isClean, skillUses, summarize } from "../session/session";
+import type { PlanTask } from "../session/setup";
+import { type Session, isClean, nextExample, skillUses, summarize } from "../session/session";
 
 /** Правила засвоєння прийому; фізичний і ментальний режими оцінюються окремо. */
 export const MASTERY: Record<Mode, { minCorrect: number; window: number; minCleanInWindow: number; minDays: number }> = {
@@ -118,6 +119,8 @@ export interface Credit {
   level?: string;
   /** Як показувалися числа: від цього залежать предмети за вид тренування. */
   pacing?: string;
+  /** Пункт плану дня, з якого запущено заняття. */
+  planned?: PlanTask;
   session: Session;
 }
 
@@ -216,6 +219,7 @@ export function creditSession(save: SaveData, credit: Credit): SaveData {
     partial: credit.partial,
     review: credit.review === true,
     ...(credit.level ? { level: credit.level } : {}),
+    ...(credit.planned ? { planned: credit.planned } : {}),
     earned: loot,
     bonuses,
   };
@@ -240,20 +244,26 @@ export function restoreSession(active: ActiveSession): Session | null {
   }
 }
 
-/** Закриває незавершене заняття, зарахувавши вже розв'язані приклади. */
+/**
+ * Закриває незавершене заняття, зарахувавши вже розв'язані приклади — і той, на який щойно
+ * відповіли, навіть якщо «Далі» ще не натиснули.
+ */
 export function closeActive(save: SaveData, now: Date): SaveData {
   const active = save.active;
   if (!active) return save;
-  const session = restoreSession(active);
+  const restored = restoreSession(active);
+  // Розв'язаний чи розібраний приклад уже має результат: переносимо його до завершених.
+  const session = restored && (restored.status === "solved" || restored.status === "failed") ? nextExample(restored) : restored;
   const credited = session
     ? creditSession(save, {
         id: active.id,
         finishedAt: now,
         topic: active.setup.topic,
         mode: active.setup.mode,
-        partial: true,
+        partial: session.status !== "finished",
         review: !!active.setup.review,
         level: active.setup.level,
+        planned: active.setup.planned,
         pacing: active.setup.pacing,
         session,
       })

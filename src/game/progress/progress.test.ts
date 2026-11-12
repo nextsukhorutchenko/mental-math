@@ -66,7 +66,7 @@ describe("незавершене заняття", () => {
     index: session.index,
     results: session.results,
     current: session.current,
-    status: "answering",
+    status: session.status === "finished" ? "answering" : session.status,
   });
 
   it("відновлюється з тими самими прикладами", () => {
@@ -89,6 +89,26 @@ describe("незавершене заняття", () => {
     expect(closed.active).toBeNull();
     expect(closed.history[0]).toMatchObject({ id: "a1", partial: true, total: 2 });
     expect(closeActive(closed, day)).toBe(closed);
+  });
+
+  it("зараховує приклад, на який відповіли, навіть без «Далі»", () => {
+    // Перший приклад розв'язано, дитина вийшла й почала інше заняття.
+    const solvedFirst = submitAnswer(startSession(drill), drill.examples[0]!.answer);
+    const closed = closeActive({ ...emptySave(), active: active(solvedFirst) }, day);
+    expect(closed.history[0]).toMatchObject({ id: "a1", partial: true, total: 1, clean: 1 });
+
+    // Двічі помилилася на третьому — він теж іде в підсумок як розібраний.
+    const failedThird = submitAnswer(submitAnswer(playedTwo(), -1), -2);
+    expect(closeActive({ ...emptySave(), active: active(failedThird) }, day).history[0]).toMatchObject({
+      total: 3,
+      failed: 1,
+      partial: false,
+    });
+
+    // Повторне закриття та сама дія з тим самим id нічого не додає.
+    const again = closeActive({ ...closed, active: active(solvedFirst) }, day);
+    expect(again.history).toHaveLength(1);
+    expect(again.inventory).toEqual(closed.inventory);
   });
 
   it("перерване ментальне заняття йде в ментальний прогрес", () => {

@@ -3,7 +3,7 @@ import type { Abacus } from "../../core/soroban/abacus";
 import { PlayerContext } from "../player";
 import { ScreenAbacus, rodsFor } from "../components/ScreenAbacus";
 import { AbacusChoice } from "../components/AbacusChoice";
-import { type Example, formatExample, generateDrill } from "../../core/generator/generator";
+import { type Example, answerOnBeads, formatExample, generateDrill } from "../../core/generator/generator";
 import { introSteps } from "../../core/rules/demo";
 import { diagnose } from "../../core/rules/diagnose";
 import { type SkillId, describeSkill, explainSkill } from "../../core/rules/skills";
@@ -113,6 +113,9 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   const [shown, setShown] = useState(!sequential || session.current.answers.length > 0);
   const example = currentExample(session);
   if (!example) return null;
+  // У діленні абакус наприкінці порожній, а відповідь — частка: її вводять цифрами, навіть на екранному абакусі.
+  const quotient = !answerOnBeads(example);
+  const readBeads = onScreen && !quotient;
   const total = session.drill.examples.length;
   const answering = session.status === "answering";
   const retry = answering && session.current.answers.length > 0;
@@ -146,14 +149,16 @@ function Practice({ session, setup, onChange }: PracticeProps) {
   const prompt = retry
     ? mental
       ? "Не зовсім. Уяви абакус і порахуй ще раз."
-      : onScreen
+      : readBeads
         ? "Не зовсім. Перевір кісточки й виправ."
         : "Не зовсім. Порахуй на абакусі ще раз."
     : mental
       ? "Уяви абакус, порахуй подумки та введи відповідь."
-      : onScreen
-        ? "Рахуй на абакусі: торкайся кісточок. Коли на ньому буде відповідь — натисни «Готово»."
-        : "Порахуй на своєму абакусі та введи відповідь.";
+      : quotient
+        ? "Поділи на абакусі: набери ділене й віднімай, доки абакус не спорожніє. Відповідь — частка: введи її цифрами."
+        : onScreen
+          ? "Рахуй на абакусі: торкайся кісточок. Коли на ньому буде відповідь — натисни «Готово»."
+          : "Порахуй на своєму абакусі та введи відповідь.";
 
   return (
     <section className="panel">
@@ -207,15 +212,16 @@ function Practice({ session, setup, onChange }: PracticeProps) {
                   </p>
                 )}
                 <Companion event={retry ? "retry" : "ask"} variant={session.index} />
-                {onScreen ? (
+                {onScreen && (
                   <ScreenAbacus
                     key={session.index}
                     rods={rods}
                     initial={beads}
                     onChange={setBeads}
-                    onSubmit={(value) => submit(value)}
+                    onSubmit={readBeads ? (value) => submit(value) : undefined}
                   />
-                ) : (
+                )}
+                {!readBeads && (
                   <>
                     <div className="answer" aria-live="polite">
                       {input || "?"}
@@ -235,7 +241,7 @@ function Practice({ session, setup, onChange }: PracticeProps) {
               <>
                 <StepDemo key={session.index} steps={example.steps} labels={example.labels} />
                 <button className="btn" onClick={() => setShowDemo(false)}>
-                  {onScreen ? "Зрозуміло, рахую на абакусі" : "Зрозуміло, вводжу відповідь"}
+                  {readBeads ? "Зрозуміло, рахую на абакусі" : "Зрозуміло, вводжу відповідь"}
                 </button>
               </>
             )}

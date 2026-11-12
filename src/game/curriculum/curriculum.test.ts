@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { divideExample, formatExample, generateDrill, multiplyExample } from "../../core/generator/generator";
+import { answerOnBeads, divideExample, formatExample, generateDrill, multiplyExample } from "../../core/generator/generator";
 import { ALL_SKILLS } from "../../core/rules/skills";
 import { type ModeProgress, type SaveData, emptyMode, emptySave, parseSave } from "../../storage/save";
 import { creditSession, recordUse } from "../progress/progress";
@@ -164,6 +164,14 @@ describe("множення й ділення", () => {
     expect(example.steps.map((step) => step.after)).toEqual([861, 161, 21, 0]);
     expect(divideExample(721, 7).steps.map((step) => step.after)).toEqual([721, 21, 0]);
     expect(() => divideExample(10, 3)).toThrow();
+  });
+
+  it("у діленні відповідь не на кісточках: частку вводять цифрами, і демонстрація про це каже", () => {
+    const example = divideExample(84, 7);
+    expect(example.steps[example.steps.length - 1]!.after).toBe(0);
+    expect(answerOnBeads(example)).toBe(false);
+    expect(example.labels![example.labels!.length - 1]).toContain("частка 12");
+    expect(answerOnBeads(multiplyExample(47, 6))).toBe(true);
   });
 
   it("рівні множення й ділення дають правильні відповіді в заданих межах", () => {

@@ -315,6 +315,8 @@ export function divideExample(dividend: number, divisor: number): Example {
     labels.push(`у частці ${digit * place}: ${digit * place} × ${divisor} = ${digit * place * divisor}`);
     value = step.after;
   });
+  // Абакус наприкінці порожній: підказуємо, що відповідь — складена частка, а не кісточки.
+  labels[labels.length - 1] += `. Абакус порожній — частка ${quotient}`;
   return { steps, labels, answer: quotient, prompt: `${dividend} : ${divisor}` };
 }
 
@@ -340,6 +342,14 @@ function generateFacts(config: DrillConfig, random: Random): Example[] {
     examples.push(example);
   }
   return examples;
+}
+
+/**
+ * Чи відповідь лишається на кісточках після останнього руху. Для ланцюжків і множення — так;
+ * для ділення абакус наприкінці порожній, а відповідь — частка, яку складають із кроків.
+ */
+export function answerOnBeads(example: Pick<Example, "steps" | "answer">): boolean {
+  return example.steps[example.steps.length - 1]?.after === example.answer;
 }
 
 /** Запис прикладу рядком: «3 + 4 − 2 = 5». */

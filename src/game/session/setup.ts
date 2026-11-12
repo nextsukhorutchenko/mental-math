@@ -27,7 +27,13 @@ export interface LessonSetup {
   review?: SkillId[];
   /** Рівень карти, з якого запущено заняття: він задає вид вправ і межі чисел. */
   level?: string;
+  /** Пункт плану дня, з якого запущено заняття: так план знає, що виконано саме заплановане. */
+  planned?: PlanTask;
 }
+
+/** Пункти плану дня, які виконуються заняттям (повторення впізнається за самим review). */
+export type PlanTask = "level" | "mental";
+export const PLAN_TASKS: PlanTask[] = ["level", "mental"];
 
 export const DEFAULT_SETUP: LessonSetup = {
   topic: "five:+4",
@@ -48,8 +54,9 @@ export const SETUP_LIMITS = {
 
 /** Коротка проба подумки після заняття на абакусі: та сама тема, мало коротких прикладів. */
 export function mentalTryout(setup: LessonSetup): LessonSetup {
+  const { planned: _planned, ...rest } = setup;
   return {
-    ...setup,
+    ...rest,
     mode: "mental",
     pacing: "all",
     exampleCount: 5,

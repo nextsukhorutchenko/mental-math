@@ -435,6 +435,11 @@ body {
   image-rendering: pixelated;
 }
 
+/* Піксельні текстури вже є в зображенні; згладжуємо лише зменшення до значка. */
+.avatar-artwork {
+  image-rendering: auto;
+}
+
 .avatar-cheer {
   animation: hop 700ms ease-out 1;
 }
@@ -706,6 +711,10 @@ body {
   cursor: pointer;
 }
 
+.pet-artwork {
+  image-rendering: auto;
+}
+
 .pet-button:hover .fox,
 .pet-button:focus-visible .fox {
   filter: drop-shadow(0 0 0 var(--gold)) drop-shadow(2px 2px 0 var(--gold));
@@ -723,6 +732,12 @@ body {
 
 .pet-card .fox {
   height: 72px;
+}
+
+.pet-card .pet-artwork {
+  width: 100%;
+  max-width: 156px;
+  height: 96px;
 }
 
 .pet-card span {

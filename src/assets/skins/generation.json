@@ -1,0 +1,105 @@
+{
+  "tool": "built-in image_gen",
+  "useCase": "stylized-concept",
+  "transparentBackground": true,
+  "referenceImages": {
+    "identity": "Original sprites in src/game/skins/skins.ts, exported as transparent PNG references",
+    "style": "User-approved Minecraft concept; white-queen cutout used for consistent later characters"
+  },
+  "sharedPrompt": "Create exactly ONE production-ready game avatar asset, not a concept sheet. The FIRST input image is this character's original pixel sprite: preserve its identity, main colors and distinctive costume motifs. The SECOND input image is the user's APPROVED Minecraft style direction: borrow ONLY its polished block-model rendering, pixel texture shading and cute readable face, not its costume or black/purple colors. Output a single full-body character on a genuinely transparent alpha background. Minecraft character geometry: cubic head, rectangular cuboid torso, straight blocky arms and legs, crisp low-resolution pixel textures, flat voxel surfaces, no rounded anime anatomy. Camera is almost front-on with a very subtle three-quarter view (about 10 degrees), head looking straight at viewer, feet aligned, arms resting straight down slightly apart from torso. Head and boots completely visible, centered upright figure, tight but safe 5% transparent margins, no ground plane, no cast shadow, no pedestal, no background particles, no props, no duplicate views, no inset portrait, no text or watermark. Match standard Minecraft player proportions: head 8 units, torso 12 units, legs 12 units, arms 4 units wide; keep hair/clothing angular, face readable as a small icon. Detailed but coherent pixel shading with crisp blocky highlights, no watercolor, no painting, no realistic skin. Friendly approachable game character, suitable for a child's arithmetic app. Preserve the outfit's unique color palette instead of recoloring every character alike. Character-specific design:  Use a clean hard-edged cutout silhouette: absolutely NO halo, bloom, glow, soft surrounding aura or smoky feathering; outside the character must be fully transparent.  Lighting: soft even ambient illumination on the character surfaces ONLY. No backlight, no rim-light, no fog, no vignette. Clean asset extraction is essential. ",
+  "characters": [
+    {
+      "id": "polia",
+      "name": "Мій скін",
+      "prompt": "A girl with long chestnut brown pixel hair and blue eyes; WHITE cat ears with pink insides; cream shirt with two small pixel cats on the chest, one ginger orange and one cocoa brown, a little pink heart; asymmetrical orange-striped left sleeves and cocoa-brown right sleeves, short dark skirt over cream leggings or knee socks, orange and brown shoes. Warm cream, orange and cocoa palette. Preserve this distinctive personal cat outfit. Fully clothed, friendly."
+    },
+    {
+      "id": "tiger",
+      "name": "Тигриця",
+      "prompt": "A girl with long vivid ginger-orange hair, green eyes, black/dark-brown outfit with orange tiger stripe pixel patterns across the top and trousers, dark boots, warm light skin. Bold tiger stripes and orange cuffs. No headwear, no animal tail."
+    },
+    {
+      "id": "white-queen",
+      "name": "Біла королева",
+      "prompt": "A girl with long snowy white hair, ruby-red eyes, pale face, a small BLACK blocky crown with a red pixel jewel, a black tailored jacket with white center panel, charcoal gray trousers and white boots. Black white silver and restrained red palette, a friendly regal expression."
+    },
+    {
+      "id": "blue-wave",
+      "name": "Синя хвиля",
+      "prompt": "A girl with long deep navy-blue hair and blue eyes, a clean white/ice-gray oversized sweatshirt with subtle light-blue wave pixel motif, white trousers, silver-gray sneakers. No headwear. Cool white navy ice-blue palette."
+    },
+    {
+      "id": "choco",
+      "name": "Шоколадка",
+      "prompt": "A girl with long chocolate-brown hair and brown eyes, a small red pixel hair bow, cocoa-brown sweater, burgundy-red short scarf, deep brown trousers, cream sock cuffs and dark chocolate boots. No long flowing fabric. Cozy chocolate and red palette."
+    },
+    {
+      "id": "bear",
+      "name": "Ведмежа",
+      "prompt": "A youthful character with brown hair and dark eyes inside a warm GRAY bear-ear hoodie, two small square gray bear ears with lighter centers, charcoal-brown center panel and hoodie pocket, black trousers, dark boots. Gray bear hood is the main recognizable motif."
+    },
+    {
+      "id": "marshmallow",
+      "name": "Зефірка",
+      "prompt": "A girl with long sandy beige hair and warm brown eyes, pink pixel hair bow, cream marshmallow sweater with a small blush-pink scarf, taupe trousers, cream sock cuffs and beige shoes. Cozy muted cream beige and blush pink palette."
+    },
+    {
+      "id": "galaxy",
+      "name": "Галактика",
+      "prompt": "A girl with long deep purple hair and bright pink eyes, pale lavender jacket with blue-violet center panel, subtle few magenta and violet star pixel details, pastel pink trousers, white sneakers with lavender soles. No headwear. Purple lilac pink cosmic palette."
+    },
+    {
+      "id": "frog",
+      "name": "Жабка",
+      "prompt": "A youthful character with warm brown hair and green eyes, sage-green FROG hoodie with two distinct square raised frog eyes at the top, cream/sage chest and a small front pocket, green sleeves, warm off-white trousers, sage sock cuffs and cream sneakers. Cute frog hood, soft sage green and cream palette."
+    },
+    {
+      "id": "pink-punk",
+      "name": "Рожева зірочка",
+      "prompt": "A girl with long pastel rose-pink hair and pink eyes, a BLACK pixel hair bow, black jacket with white front panel and a small pink star pixel emblem, charcoal gray trousers, white sock cuffs, black shoes with rose accents. Soft pink hair contrasted against dark streetwear."
+    },
+    {
+      "id": "turquoise",
+      "name": "Бірюза",
+      "prompt": "A girl with long bright turquoise hair and turquoise eyes, light gray shirt with a slim turquoise pixel tie, deep navy-blue sleeves and trousers, turquoise sneakers. No headwear. Clean turquoise gray navy palette."
+    },
+    {
+      "id": "night-star",
+      "name": "Нічна зірка",
+      "prompt": "The previously approved black-and-violet cat-hood character: pale face, short snowy-white pixel hair, blue-violet eyes, midnight-black cat-eared hoodie with blue-violet squared ear tips, purple pixel question-mark emblem on chest, purple drawstrings and cuffs, black trousers, purple high-top shoes. Match the approved concept strongly; this is the character shown in the approved reference."
+    },
+    {
+      "id": "strongman",
+      "name": "Силач",
+      "prompt": "A friendly athletic youthful male Minecraft character with short dark-brown hair, violet eyes, warm tan skin, blocky muscular torso with subtle pixel muscle shading as in the original skin, white boxing gloves, vivid purple athletic trousers, white high-top sports shoes with purple trim. Confident friendly expression, no aggression, no weapons. Tan purple white palette."
+    },
+    {
+      "id": "sorceress",
+      "name": "Чарівниця",
+      "prompt": "A girl with long warm chestnut hair and violet eyes, a small dark-purple blocky crown/tiara with an icy blue jewel, rich purple tunic/jacket with ice-blue center trim and cuffs, matching deep-purple trousers, dark purple boots. Friendly magical adventurer, compact outfit, no flowing robes, no weapons, no magic particles."
+    },
+    {
+      "id": "pastel",
+      "name": "Пастелька",
+      "prompt": "A girl with long pastel lavender hair and violet eyes, a sunny-yellow pixel hair bow, a blush-pink sweater and matching pink trousers, a short yellow scarf, white sock cuffs and dusty pink shoes. Soft lavender pink and yellow palette. No floating decorative objects."
+    },
+    {
+      "id": "shadow",
+      "name": "Тінь",
+      "prompt": "A youthful character with dark charcoal hair and luminous turquoise eyes, dark navy cat-eared hood with turquoise ear interiors, midnight-blue top with a turquoise pixel rune/question-mark, contrasting pale sand-beige sleeves and sand-beige shoes, black trousers. Navy black mint and beige palette, friendly mysterious expression."
+    },
+    {
+      "id": "emerald",
+      "name": "Смарагд",
+      "prompt": "A fantasy emerald adventurer with TEAL-GREEN skin as in the original, short dark teal-green pixel hair, pale mint-green eyes, teal-green top with a bright mint pixel rune/diamond on chest, shaded deep-green trousers and dark teal boots. Preserve the unusual green-skinned identity. Friendly expression, no hat, no weapons, no floating particles."
+    }
+  ],
+  "preparation": {
+    "format": "WebP",
+    "maxWidth": 512,
+    "maxHeight": 768,
+    "quality": 90,
+    "alphaQuality": 100
+  },
+  "note": "Generation recipe. Each character was generated separately; the first four were regenerated using the clean-cutout style reference. Original sprites remain the image-error fallback."
+}

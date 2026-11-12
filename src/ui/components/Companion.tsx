@@ -1,22 +1,33 @@
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { PETS, petById } from "../../game/companion/pets";
+import { PET_ARTWORK } from "../../game/companion/artwork";
 import { type CompanionEvent, type Mood, type PlaceKind, phrase } from "../../game/companion/phrases";
 import { PlayerContext } from "../player";
 import { Modal } from "./Modal";
 
-/** Піксельна тварина на повний зріст. */
+/** Minecraft-супутник; старий спрайт лишається резервом, якщо зображення недоступне. */
 export function PetSprite({ id, mood = "calm", className = "" }: { id: string; mood?: Mood; className?: string }) {
   const pet = petById(id);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const artwork = PET_ARTWORK[pet.id];
+  const showArtwork = artwork && failedSource !== artwork.src;
   const width = Math.max(...pet.rows.map((row) => row.length));
   return (
     <svg
-      className={`fox fox-${mood} ${className}`}
-      viewBox={`0 0 ${width} ${pet.rows.length}`}
+      className={`fox fox-${mood}${showArtwork ? " pet-artwork" : ""} ${className}`}
+      viewBox={showArtwork ? `0 0 ${artwork.width} ${artwork.height}` : `0 0 ${width} ${pet.rows.length}`}
       role="img"
       aria-label={`${pet.species} ${pet.name}`}
       shapeRendering="crispEdges"
     >
-      {pet.rows.flatMap((row, y) =>
+      {showArtwork ? (
+        <image
+          href={artwork.src}
+          width={artwork.width}
+          height={artwork.height}
+          onError={() => setFailedSource(artwork.src)}
+        />
+      ) : pet.rows.flatMap((row, y) =>
         [...row].map((cell, x) =>
           cell === "." || !pet.colors[cell] ? null : (
             <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={pet.colors[cell]} />

@@ -1,6 +1,7 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import type { CompanionEvent, PlaceKind } from "../../game/companion/phrases";
 import { SKINS, skinById } from "../../game/skins/skins";
+import { SKIN_ARTWORK } from "../../game/skins/artwork";
 import { PlayerContext } from "../player";
 import { Companion } from "./Companion";
 import { Modal } from "./Modal";
@@ -20,17 +21,30 @@ interface Props {
 /** Піксельний аватар гравця за вибраним скіном. */
 export function Avatar({ variant = "full", cheer = false, className = "", skin }: Props) {
   const player = useContext(PlayerContext);
-  const { name, sprite } = skinById(skin ?? player.skin);
-  const viewBox = variant === "head" ? "3 0 10 10" : "0 0 16 34";
+  const { id, name, sprite } = skinById(skin ?? player.skin);
+  const [failedSource, setFailedSource] = useState<string | null>(null);
+  const artwork = SKIN_ARTWORK[id];
+  const showArtwork = artwork && failedSource !== artwork.src;
+  // Один файл для фігурки й значка: обличчя кадрується без повторного завантаження.
+  const viewBox = showArtwork
+    ? variant === "head" ? artwork.headViewBox : `0 0 ${artwork.width} ${artwork.height}`
+    : variant === "head" ? "3 0 10 10" : "0 0 16 34";
   return (
     <svg
-      className={`avatar avatar-${variant}${cheer ? " avatar-cheer" : ""} ${className}`}
+      className={`avatar avatar-${variant}${showArtwork ? " avatar-artwork" : ""}${cheer ? " avatar-cheer" : ""} ${className}`}
       viewBox={viewBox}
       role="img"
       aria-label={skin ? `Скін «${name}»` : `Аватар: ${player.name}`}
       shapeRendering="crispEdges"
     >
-      {sprite.rows.flatMap((row, y) =>
+      {showArtwork ? (
+        <image
+          href={artwork.src}
+          width={artwork.width}
+          height={artwork.height}
+          onError={() => setFailedSource(artwork.src)}
+        />
+      ) : sprite.rows.flatMap((row, y) =>
         [...row].map((cell, x) =>
           cell === "." ? null : <rect key={`${x}-${y}`} x={x} y={y} width={1.02} height={1.02} fill={sprite.colors[cell]} />,
         ),

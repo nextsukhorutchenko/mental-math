@@ -41,16 +41,17 @@ const firstLevelOf = (kind: "multiply" | "divide") => LEVELS.find((level) => lev
 const FAMILIES: SkillFamily[] = ["simple", "five", "ten", "mix"];
 const COUNT_PRESETS = [5, 10, 20, 30, 50];
 
-function Stepper(props: { value: number; min: number; max: number; step?: number; onChange: (value: number) => void }) {
-  const { value, min, max, step = 1, onChange } = props;
+function Stepper(props: { label: string; value: number; min: number; max: number; step?: number; onChange: (value: number) => void }) {
+  const { label, value, min, max, step = 1, onChange } = props;
   // Округлюємо до кроку, щоб не накопичувати похибку на дробових значеннях.
   const clamp = (next: number) => Math.min(max, Math.max(min, Math.round(next / step) * step));
   return (
     <div className="stepper">
-      <button className="btn btn-quiet" onClick={() => onChange(clamp(value - step))} disabled={value <= min}>
+      <button className="btn btn-quiet" aria-label={`${label}: менше`} onClick={() => onChange(clamp(value - step))} disabled={value <= min}>
         −
       </button>
       <input
+        aria-label={label}
         type="number"
         inputMode="decimal"
         min={min}
@@ -59,7 +60,7 @@ function Stepper(props: { value: number; min: number; max: number; step?: number
         value={value}
         onChange={(event) => onChange(clamp(Number(event.target.value) || min))}
       />
-      <button className="btn btn-quiet" onClick={() => onChange(clamp(value + step))} disabled={value >= max}>
+      <button className="btn btn-quiet" aria-label={`${label}: більше`} onClick={() => onChange(clamp(value + step))} disabled={value >= max}>
         +
       </button>
     </div>
@@ -218,6 +219,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           <>
             <span className="note">Пауза між числами, секунд:</span>
             <Stepper
+              label="Пауза між числами, секунд"
               value={setup.secondsPerNumber}
               min={SETUP_LIMITS.seconds.min}
               max={SETUP_LIMITS.seconds.max}
@@ -230,6 +232,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           <>
             <span className="note">Секунд на кожне число (є пауза):</span>
             <Stepper
+              label="Секунд на кожне число"
               value={setup.secondsPerNumber}
               min={SETUP_LIMITS.seconds.min}
               max={SETUP_LIMITS.seconds.max}
@@ -249,6 +252,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
           onChange={(exampleCount) => set({ exampleCount })}
         />
         <Stepper
+          label="Кількість прикладів"
           value={setup.exampleCount}
           min={SETUP_LIMITS.examples.min}
           max={SETUP_LIMITS.examples.max}
@@ -266,6 +270,7 @@ export function SetupScreen({ initial, skills, active, error, onStart, onFlash }
       <div className="field">
         <span>Кількість дій у прикладі</span>
         <Stepper
+          label="Кількість дій у прикладі"
           value={setup.actionsPerExample}
           min={SETUP_LIMITS.actions.min}
           max={SETUP_LIMITS.actions.max}

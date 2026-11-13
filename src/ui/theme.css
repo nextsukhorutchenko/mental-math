@@ -391,6 +391,8 @@ body {
 .topbar {
   display: flex;
   align-items: center;
+  /* Коли кнопок більше, ніж уміщається в рядок (під час уроку додається «Вийти»), вони переходять нижче, а не за край. */
+  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 16px;
 }
@@ -407,6 +409,8 @@ body {
 .topbar-actions {
   margin-left: auto;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 10px;
 }

@@ -1,3 +1,4 @@
+import { SIMPLE } from "../../core/rules/skills";
 import type { SaveData } from "../../storage/save";
 import { type Mastery, masteryOf } from "../progress/progress";
 import { DEFAULT_SETUP, type LessonSetup } from "../session/setup";
@@ -35,8 +36,11 @@ export function levelStates(
   // Нові рівні, вставлені в програму перед уже засвоєними (наприклад, «1–4» для тих, хто вже на формулах),
   // не повертають дитину назад: незайманий рівень до останнього засвоєного вважається пропущеним.
   // Беремо саме засвоєні, а не розпочаті: проба формули у вільному тренажері нічого не пропускає.
+  // Рівень «прямі рухи: усі числа» до уваги не беремо: прямі рухи тренуються вже на рівнях «1–4» і «5–9»,
+  // тож він засвоюється попутно й не означає, що дитина пішла далі (інакше «5–9» пропускався б одразу після «1–4»).
   const lastMastered = LEVELS.reduce(
-    (last, level, index) => (masteryOf(progress[level.id]?.physical, "physical").status === "mastered" ? index : last),
+    (last, level, index) =>
+      level.id !== SIMPLE && masteryOf(progress[level.id]?.physical, "physical").status === "mastered" ? index : last,
     -1,
   );
   let previousMastered = true;

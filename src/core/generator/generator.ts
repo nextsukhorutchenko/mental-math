@@ -53,6 +53,11 @@ export class GeneratorError extends Error {}
 
 const MAX_ATTEMPTS_PER_EXAMPLE = 400;
 const LOOKAHEAD_SAMPLE = 40;
+/**
+ * Скільки кроків тримати в кеші. Від одного трицифрового числа можливих кроків до 1800, тож без межі
+ * кеш на нездійсненних налаштуваннях розростався до гігабайтів і вкладка браузера падала.
+ */
+const STEP_CACHE_LIMIT = 100_000;
 
 interface Context {
   allowed: Set<SkillId>;
@@ -67,6 +72,8 @@ interface Context {
   random: Random;
   /** Кеш: можливі кроки від числа не залежать від історії прикладу. */
   stepCache: Map<number, Step[]>;
+  /** Скільки кроків зараз лежить у stepCache. */
+  cachedSteps: number;
   focusCache: Map<number, boolean>;
   reachCache: Map<string, boolean>;
   /** Скільки разів кожен цільовий прийом уже трапився в наборі — щоб ділити дії між ними порівну. */
@@ -95,6 +102,22 @@ function validate(config: DrillConfig): void {
       throw new GeneratorError(`Цільовий прийом ${skill} відсутній серед дозволених`);
     }
   }
+  // Прийом на віднімання не трапиться в прикладах лише на додавання (і навпаки): відмовляємо одразу,
+  // а не після сотень марних спроб.
+  const focus = (config.focusSkills ?? []).filter((skill) => skill !== "simple");
+  const onlyBySkill = config.focusOperandMin === undefined;
+  if (onlyBySkill && config.operations !== "mixed" && focus.length > 0 && focus.every((skill) => skillSign(skill) !== config.operations)) {
+    throw new GeneratorError(
+      config.operations === "+"
+        ? "Ця тема — прийом на віднімання, а вибрано лише додавання: змініть знаки або тему"
+        : "Ця тема — прийом на додавання, а вибрано лише віднімання: змініть знаки або тему",
+    );
+  }
+}
+
+/** Знак дії, якою виконується прийом: «five:+4» — додавання. */
+function skillSign(skill: SkillId): Sign {
+  return skill.split(":")[1]?.[0] === "-" ? "-" : "+";
 }
 
 function isFocus(step: Step, ctx: Context): boolean {
@@ -126,7 +149,12 @@ function nextSteps(value: number, ctx: Context): Step[] {
   let steps = ctx.stepCache.get(value);
   if (!steps) {
     steps = candidates(value, ctx.signs, ctx);
+    if (ctx.cachedSteps + steps.length > STEP_CACHE_LIMIT) {
+      ctx.stepCache.clear();
+      ctx.cachedSteps = 0;
+    }
     ctx.stepCache.set(value, steps);
+    ctx.cachedSteps += steps.length;
   }
   return steps;
 }
@@ -242,6 +270,7 @@ export function generateDrill(config: DrillConfig): Drill {
     signs: config.operations === "mixed" ? ["+", "-"] : [config.operations],
     random: createRandom(seed),
     stepCache: new Map(),
+    cachedSteps: 0,
     focusCache: new Map(),
     reachCache: new Map(),
     focusUses: new Map(),

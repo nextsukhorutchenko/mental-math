@@ -3,3 +3,6 @@ dist
 *.local
 books/
 *.tsbuildinfo
+test-results
+playwright-report
+coverage

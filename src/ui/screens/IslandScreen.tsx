@@ -194,18 +194,21 @@ export function IslandScreen({ world, questsDone, onChange }: Props) {
         </div>
       )}
 
-      <div className="choice" role="tablist" aria-label="Ділянки">
-        {world.plots.map((_, index) => (
-          <button
-            key={index}
-            role="tab"
-            aria-selected={index === current}
-            className={`chip${index === current ? " chip-active" : ""}`}
-            onClick={() => setActive(index)}
-          >
-            {plotName(index)}
-          </button>
-        ))}
+      <div className="choice">
+        {/* Список вкладок містить лише вкладки; кнопка нової ділянки стоїть поруч, а не всередині нього. */}
+        <div role="tablist" aria-label="Ділянки" style={{ display: "contents" }}>
+          {world.plots.map((_, index) => (
+            <button
+              key={index}
+              role="tab"
+              aria-selected={index === current}
+              className={`chip${index === current ? " chip-active" : ""}`}
+              onClick={() => setActive(index)}
+            >
+              {plotName(index)}
+            </button>
+          ))}
+        </div>
         {world.plots.length < MAX_PLOTS && (
           <button className="chip" onClick={() => setChoosing(!choosing)} aria-expanded={choosing}>
             ➕ Нова ділянка

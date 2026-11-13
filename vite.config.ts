@@ -102,6 +102,14 @@ export default defineConfig({
   define: { __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()) },
   plugins: [react(), offlinePlugin()],
   test: {
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
+    // Масові перевірки навантажують процесор, і сусідні тести йдуть повільніше, ніж поодинці.
+    testTimeout: 30_000,
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.test.{ts,tsx}", "src/testing/**", "src/vite-env.d.ts"],
+      reporter: ["text-summary", "text"],
+    },
   },
 });

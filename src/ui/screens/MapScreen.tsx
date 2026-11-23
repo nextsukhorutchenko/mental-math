@@ -8,6 +8,7 @@ import {
   levelLabel,
   levelStates,
   recommendLesson,
+  worldProgress,
 } from "../../game/curriculum/curriculum";
 import type { CardSetup } from "../../game/cards/types";
 import type { DailyPart } from "../../game/curriculum/daily";
@@ -18,6 +19,14 @@ import type { SaveData } from "../../storage/save";
 import { Avatar, Hero } from "../components/Avatar";
 
 const ICONS: Record<LevelState["status"], string> = { locked: "🔒", open: "", learning: "⛏", mastered: "⭐" };
+/** Стан плитки словами для екранного читача. */
+const STATUS_SPOKEN: Record<LevelState["status"] | "credited", string> = {
+  locked: ", зачинено",
+  open: "",
+  learning: ", у роботі",
+  mastered: ", засвоєно",
+  credited: ", зараховано",
+};
 
 function masteryLine(name: string, mastery: Mastery): string {
   if (mastery.status === "new") return `${name}: ще не починали`;
@@ -50,6 +59,12 @@ function LevelCard({ state, onStart, onCustomize, onClose }: CardProps) {
         </button>
       </div>
       <p className="lead">{state.level.explain}</p>
+      {state.credited && (
+        <p className="note">
+          ✔ Рівень зараховано: ти вже показала, що це вмієш — у стартовій перевірці або на складнішому рівні.
+          Потренуватися тут можна будь-коли.
+        </p>
+      )}
       {locked ? (
         <p className="note">🔒 Рівень відкриється, коли попередній буде засвоєно на абакусі.</p>
       ) : (
@@ -200,7 +215,7 @@ export function MapScreen(props: Props) {
       <Daily plan={plan} onStart={onStart} onCards={onCards} />
       {WORLDS.map((world) => {
         const levels = world.levels.map((level) => byskill.get(level.id)!);
-        const done = levels.filter((level) => level.status === "mastered").length;
+        const done = worldProgress(world, states).passed;
         return (
           <section key={world.id} className={`world world-${world.id}`}>
             <header className="world-head">
@@ -221,9 +236,10 @@ export function MapScreen(props: Props) {
               {levels.map((level) => (
                 <button
                   key={level.id}
-                  className={`tile tile-${level.status}${level.id === current ? " tile-current" : ""}${level.id === selected ? " tile-selected" : ""}`}
+                  className={`tile tile-${level.credited ? "credited" : level.status}${level.id === current ? " tile-current" : ""}${level.id === selected ? " tile-selected" : ""}`}
                   onClick={() => setSelected(level.id)}
-                  aria-label={`Рівень ${levelLabel(level.id)}${level.id === current ? ", ти тут" : ""}`}
+                  aria-label={`Рівень ${levelLabel(level.id)}${STATUS_SPOKEN[level.credited ? "credited" : level.status]}${level.id === current ? ", ти тут" : ""}`}
+                  title={level.credited ? "Зараховано" : undefined}
                 >
                   {level.id === current && (
                     <span className="tile-you" aria-hidden="true">
@@ -232,7 +248,7 @@ export function MapScreen(props: Props) {
                   )}
                   <span className="tile-label">{levelLabel(level.id)}</span>
                   <span className="tile-icon">
-                    {level.skipped ? "⏭" : ICONS[level.status]}
+                    {level.credited ? "✔" : ICONS[level.status]}
                     {level.mental.status === "mastered" ? "🧠" : ""}
                   </span>
                 </button>

@@ -18,8 +18,13 @@ export interface LevelState {
   status: "locked" | "open" | "learning" | "mastered";
   physical: Mastery;
   mental: Mastery;
-  /** Рівень до місця, визначеного стартовою перевіркою: відкритий, але за нього не беремося. */
-  skipped: boolean;
+  /**
+   * Зараховано без засвоєння заняттями: стартова перевірка показала, що дитина це вміє,
+   * або вже засвоєно складніший рівень. Рівень лишається відкритим — потренуватися можна будь-коли.
+   */
+  credited: boolean;
+  /** Рівень пройдено: засвоєно на абакусі або зараховано. Так рахуються зірки світу, поточний рівень і розряди. */
+  passed: boolean;
 }
 
 /**
@@ -43,23 +48,23 @@ export function levelStates(
       level.id !== SIMPLE && masteryOf(progress[level.id]?.physical, "physical").status === "mastered" ? index : last,
     -1,
   );
-  let previousMastered = true;
+  let previousPassed = true;
   return LEVELS.map((level, index) => {
     const physical = masteryOf(progress[level.id]?.physical, "physical");
     const mental = masteryOf(progress[level.id]?.mental, "mental");
-    const reachable = previousMastered || unlockAll || index <= startIndex || physical.status !== "new";
-    previousMastered = physical.status === "mastered";
-    const status =
-      physical.status === "mastered" ? "mastered" : !reachable ? "locked" : physical.status === "new" ? "open" : "learning";
-    const skipped =
-      status !== "mastered" && (index < startIndex || (physical.status === "new" && index < lastMastered));
-    return { id: level.id, level, status, physical, mental, skipped };
+    const mastered = physical.status === "mastered";
+    const credited = !mastered && (index < startIndex || (physical.status === "new" && index < lastMastered));
+    // Зарахований рівень ніколи не зачинений і відкриває наступний так само, як засвоєний.
+    const reachable = previousPassed || unlockAll || credited || index <= startIndex || physical.status !== "new";
+    previousPassed = mastered || credited;
+    const status = mastered ? "mastered" : !reachable ? "locked" : physical.status === "new" ? "open" : "learning";
+    return { id: level.id, level, status, physical, mental, credited, passed: mastered || credited };
   });
 }
 
-/** Рівень, на якому дитина зараз: перший незасвоєний, не раніше місця зі стартової перевірки. */
+/** Рівень, на якому дитина зараз: перший непройдений (не засвоєний і не зарахований). */
 export function currentLevel(states: readonly LevelState[]): LevelId | null {
-  return states.find((state) => state.status !== "mastered" && !state.skipped)?.id ?? null;
+  return states.find((state) => !state.passed)?.id ?? null;
 }
 
 /** Розряд — це повністю пройдений світ. Розряди рахуються від старшого номера до першого. */
@@ -74,10 +79,16 @@ export function rankFor(world: World): Rank {
   return { world, number: WORLDS.length - WORLDS.indexOf(world), title: world.rank };
 }
 
-/** Розряди за світи, у яких усі рівні засвоєно на абакусі. */
+/** Розряди за світи, у яких усі рівні пройдено: засвоєно на абакусі або зараховано. */
 export function earnedRanks(states: readonly LevelState[]): Rank[] {
-  const mastered = new Set(states.filter((state) => state.status === "mastered").map((state) => state.id));
-  return WORLDS.filter((world) => world.levels.every((level) => mastered.has(level.id))).map(rankFor);
+  const passed = new Set(states.filter((state) => state.passed).map((state) => state.id));
+  return WORLDS.filter((world) => world.levels.every((level) => passed.has(level.id))).map(rankFor);
+}
+
+/** Скільки рівнів світу пройдено — число на заголовку світу. */
+export function worldProgress(world: World, states: readonly LevelState[]): { passed: number; total: number } {
+  const ids = new Set(world.levels.map((level) => level.id));
+  return { passed: states.filter((state) => ids.has(state.id) && state.passed).length, total: ids.size };
 }
 
 export interface Recommendation {

@@ -1046,6 +1046,12 @@ main > .panel + .panel {
   text-shadow: 2px 2px 0 var(--world-dark);
 }
 
+/* Зараховано за перевіркою: колір світу, але світліший, ніж у засвоєного заняттями. */
+.tile-credited {
+  background: color-mix(in srgb, var(--world) 45%, #fff);
+  color: var(--ink);
+}
+
 .tile-current {
   outline: 4px solid var(--gold);
   outline-offset: 2px;

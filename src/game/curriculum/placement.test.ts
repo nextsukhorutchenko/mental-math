@@ -40,14 +40,14 @@ describe("стартова перевірка", () => {
   it("карта відкриває все до місця старту і вважає поточним саме його", () => {
     const states = levelStates({}, false, "ten:+1");
     const at = (id: string) => states.find((state) => state.id === id)!;
-    expect(at("simple")).toMatchObject({ status: "open", skipped: true });
-    expect(at("five:-4")).toMatchObject({ status: "open", skipped: true });
-    expect(at("ten:+1")).toMatchObject({ status: "open", skipped: false });
+    expect(at("simple")).toMatchObject({ status: "open", credited: true, passed: true });
+    expect(at("five:-4")).toMatchObject({ status: "open", credited: true, passed: true });
+    expect(at("ten:+1")).toMatchObject({ status: "open", credited: false, passed: false });
     expect(at("ten:+2").status).toBe("locked");
     expect(currentLevel(states)).toBe("ten:+1");
     // Без перевірки все як раніше.
     expect(currentLevel(levelStates({}, false))).toBe("simple:low");
-    expect(levelStates({}, false).every((state) => !state.skipped)).toBe(true);
+    expect(levelStates({}, false).every((state) => !state.credited && !state.passed)).toBe(true);
   });
 
   it("план дня веде на рівень зі стартової перевірки, а вибір зберігається", () => {

@@ -78,14 +78,15 @@ describe("карта навчання", () => {
     // Збереження зі старої карти: прямі рухи засвоєно, працюємо над +2; рівнів «1–4» і «5–9» тоді ще не було.
     const old = { simple: skill(mastered()), "five:+1": skill(mastered()), "five:+2": skill(uses(10, true, THREE_DAYS)) };
     const states = levelStates(old, false);
-    expect(stateOf(old, "simple:low")).toMatchObject({ status: "open", skipped: true });
-    expect(stateOf(old, "simple:five")).toMatchObject({ skipped: true });
+    expect(stateOf(old, "simple:low")).toMatchObject({ status: "open", credited: true, passed: true });
+    // Зарахований рівень не зачиняється, навіть якщо попередній лише зараховано, а не засвоєно.
+    expect(stateOf(old, "simple:five")).toMatchObject({ status: "open", credited: true, passed: true });
     expect(currentLevel(states)).toBe("five:+2");
     // А рівень після останнього розпочатого лишається звичайним.
-    expect(stateOf(old, "five:+3")).toMatchObject({ status: "locked", skipped: false });
+    expect(stateOf(old, "five:+3")).toMatchObject({ status: "locked", credited: false, passed: false });
     // Проба далекої формули в тренажері нічого не пропускає.
     const tried = { ...old, "ten:+9": skill(uses(5, true, THREE_DAYS)) };
-    expect(stateOf(tried, "five:+3").skipped).toBe(false);
+    expect(stateOf(tried, "five:+3").credited).toBe(false);
     expect(currentLevel(levelStates(tried, false))).toBe("five:+2");
   });
 

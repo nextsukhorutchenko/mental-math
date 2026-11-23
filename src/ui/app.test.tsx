@@ -445,7 +445,7 @@ describe("розділи застосунку", () => {
     const user = userEvent.setup();
     seed(ready());
     render(<App />);
-    await user.click(screen.getByRole("button", { name: "Рівень 47×26" }));
+    await user.click(screen.getByRole("button", { name: "Рівень 47×26, зачинено" }));
     const card = screen.getByRole("dialog", { name: "Рівень" });
     expect(within(card).getByText(/Рівень відкриється, коли попередній буде засвоєно/)).toBeTruthy();
     expect(within(card).queryByRole("button", { name: /прикладів/ })).toBeNull();
